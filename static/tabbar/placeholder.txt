@@ -1,0 +1,15 @@
+请在此目录添加以下图标文件：
+1. home.png 和 home-active.png - 首页图标
+2. workout.png 和 workout-active.png - 训练图标 
+3. plan.png 和 plan-active.png - 计划图标
+4. progress.png 和 progress-active.png - 进度图标
+
+您可以使用简单的图标或从设计资源网站下载合适的图标。
+如果找不到合适的图标，可以使用uni-app自带的图标库替代。
+
+// 这个文件仅用于保持目录结构
+// 您可以将tabBar图标放在这个目录中
+// 例如：
+// - home.png (未选中状态)
+// - home-active.png (选中状态)
+// 然后在pages.json中引用这些图标 

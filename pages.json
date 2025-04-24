@@ -1,0 +1,80 @@
+{
+	"pages": [
+		{
+			"path": "pages/login/login",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"app-plus": {
+					"titleNView": false
+				}
+			}
+		},
+		{
+			"path": "pages/register/register",
+			"style": {
+				"navigationBarTitleText": "注册",
+				"app-plus": {
+					"titleNView": false
+				}
+			}
+		},
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "首页",
+				"app-plus": {
+					"titleNView": false
+				}
+			}
+		},
+		{
+			"path": "pages/workouts/workouts",
+			"style": {
+				"navigationBarTitleText": "运动数据库",
+				"app-plus": {
+					"titleNView": false
+				}
+			}
+		},
+		{
+			"path": "pages/plans/plans",
+			"style": {
+				"navigationBarTitleText": "健身计划",
+				"app-plus": {
+					"titleNView": false
+				}
+			}
+		},
+		{
+			"path": "pages/progress/progress",
+			"style": {
+				"navigationBarTitleText": "进度追踪",
+				"app-plus": {
+					"titleNView": false
+				}
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "FitTrack",
+		"navigationBarBackgroundColor": "#3b82f6",
+		"backgroundColor": "#F5F5F5"
+	},
+	"tabBar": {
+		"height": "0px",
+		"backgroundColor": "#ffffff",
+		"color": "#ffffff",
+		"selectedColor": "#ffffff",
+		"borderStyle": "white",
+		"custom": "custom-tab-bar/custom-tab-bar",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "",
+				"iconPath": "static/tabbar/transparent.png",
+				"selectedIconPath": "static/tabbar/transparent.png"
+			}
+		]
+	}
+}

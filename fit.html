@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack - 您的智能健身伙伴</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .active-tab {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+        }
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 登录页面 -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">登录您的账户</h2>
+            </div>
+            <form class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm space-y-4">
+                    <div>
+                        <label for="email" class="sr-only">邮箱地址</label>
+                        <input id="email" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="邮箱地址">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">密码</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="密码">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="remember-me" class="ml-2 block text-sm text-gray-900">记住我</label>
+                    </div>
+
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-blue-600 hover:text-blue-500">忘记密码?</a>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150">
+                        登录
+                    </button>
+                </div>
+            </form>
+            <div class="text-center">
+                <p class="text-sm text-gray-600">还没有账户? <a href="#" id="show-register" class="font-medium text-blue-600 hover:text-blue-500">立即注册</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册页面 -->
+    <div id="register-page" class="hidden min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">创建新账户</h2>
+            </div>
+            <form class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm space-y-4">
+                    <div>
+                        <label for="reg-email" class="sr-only">邮箱地址</label>
+                        <input id="reg-email" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="邮箱地址">
+                    </div>
+                    <div>
+                        <label for="reg-password" class="sr-only">密码</label>
+                        <input id="reg-password" name="password" type="password" autocomplete="new-password" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="密码">
+                    </div>
+                    <div>
+                        <label for="confirm-password" class="sr-only">确认密码</label>
+                        <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="确认密码">
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input id="terms" name="terms" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="terms" class="ml-2 block text-sm text-gray-900">我同意<a href="#" class="font-medium text-blue-600 hover:text-blue-500">服务条款</a></label>
+                </div>
+
+                <div>
+                    <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150">
+                        注册
+                    </button>
+                </div>
+            </form>
+            <div class="text-center">
+                <p class="text-sm text-gray-600">已有账户? <a href="#" id="show-login" class="font-medium text-blue-600 hover:text-blue-500">立即登录</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主仪表盘 -->
+    <div id="dashboard" class="hidden">
+        <!-- 导航栏 -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <span class="text-xl font-bold text-blue-600">FitTrack</span>
+                        </div>
+                        <div class="hidden md:ml-6 md:flex md:space-x-8">
+                            <a href="#" data-page="home" class="active-tab border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">首页</a>
+                            <a href="#" data-page="workouts" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">运动数据库</a>
+                            <a href="#" data-page="plans" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">健身计划</a>
+                            <a href="#" data-page="progress" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">进度追踪</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <button type="button" class="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <span>记录训练</span>
+                            </button>
+                        </div>
+                        <div class="hidden md:ml-4 md:flex-shrink-0 md:flex md:items-center">
+                            <div class="ml-3 relative">
+                                <div>
+                                    <button type="button" class="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
+                                        <span class="sr-only">打开用户菜单</span>
+                                        <img class="h-8 w-8 rounded-full" src="https://via.placeholder.com/150" alt="">
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容区 -->
+        <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+            <!-- 首页内容 -->
+            <div id="home-content" class="fade-in">
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">欢迎回来, 用户!</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-blue-800">今日训练</h3>
+                            <p class="text-2xl font-bold text-blue-600 mt-2">胸肌 & 三头肌</p>
+                            <p class="text-sm text-blue-500 mt-1">下午 6:30</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-green-800">本周完成</h3>
+                            <p class="text-2xl font-bold text-green-600 mt-2">3 次训练</p>
+                            <p class="text-sm text-green-500 mt-1">比上周多 1 次</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-purple-800">当前体重</h3>
+                            <p class="text-2xl font-bold text-purple-600 mt-2">75.5 kg</p>
+                            <p class="text-sm text-purple-500 mt-1">比上周 -0.5 kg</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-900">推荐训练计划</h2>
+                        <a href="#" class="text-sm text-blue-600 hover:text-blue-500">查看全部</a>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="plan-card bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                            <div class="p-5">
+                                <h3 class="text-lg font-bold text-gray-900 mb-2">初学者全身训练</h3>
+                                <p class="text-gray-600 mb-4">适合刚开始健身的人群，全面锻炼所有主要肌群。</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">初级</span>
+                                    <span class="text-sm text-gray-500">45 分钟</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="plan-card bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                            <div class="p-5">
+                                <h3 class="text-lg font-bold text-gray-900 mb-2">增肌力量训练</h3>
+                                <p class="text-gray-600 mb-4">专注于大重量复合动作，促进肌肉生长。</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">中级</span>
+                                    <span class="text-sm text-gray-500">60 分钟</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="plan-card bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                            <div class="p-5">
+                                <h3 class="text-lg font-bold text-gray-900 mb-2">高强度间歇训练</h3>
+                                <p class="text-gray-600 mb-4">燃烧脂肪，提高心肺功能的HIIT训练。</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">高级</span>
+                                    <span class="text-sm text-gray-500">30 分钟</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 运动数据库内容 -->
+            <div id="workouts-content" class="hidden fade-in">
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">运动数据库</h2>
+                    
+                    <!-- 搜索框 -->
+                    <div class="mb-8">
+                        <input type="text" placeholder="搜索运动..." class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <!-- 筛选标签 -->
+                    <div class="flex flex-wrap gap-2 mb-8">
+                        <button class="exercise-filter active bg-blue-600 text-white px-4 py-2 rounded-full">全部</button>
+                        <button class="exercise-filter bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-full">胸部</button>
+                        <button class="exercise-filter bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-full">背部</button>
+                        <button class="exercise-filter bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-full">腿部</button>
+                        <button class="exercise-filter bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-full">肩部</button>
+                        <button class="exercise-filter bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-full">手臂</button>
+                        <button class="exercise-filter bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-full">核心</button>
+                    </div>
+                    
+                    <!-- 运动项目列表 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- 示例卡片1 -->
+                        <div class="exercise-card bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2">平板卧推</h3>
+                                <p class="text-gray-600 mb-4">使用杠铃在平板上进行胸部训练的基础动作。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">胸部</span>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">杠铃</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 示例卡片2 -->
+                        <div class="exercise-card bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2">引体向上</h3>
+                                <p class="text-gray-600 mb-4">锻炼背部和手臂力量的经典自重训练。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">背部</span>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">自重</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 示例卡片3 -->
+                        <div class="exercise-card bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2">深蹲</h3>
+                                <p class="text-gray-600 mb-4">锻炼下肢肌群的黄金动作，可负重或自重进行。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">腿部</span>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">杠铃</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 示例卡片4 -->
+                        <div class="exercise-card bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2">硬拉</h3>
+                                <p class="text-gray-600 mb-4">锻炼后链肌群的复合动作，提升整体力量。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">背部</span>
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">腿部</span>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">杠铃</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 示例卡片5 -->
+                        <div class="exercise-card bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2">哑铃肩推</h3>
+                                <p class="text-gray-600 mb-4">发展肩部力量和围度的经典动作。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">肩部</span>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">哑铃</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 示例卡片6 -->
+                        <div class="exercise-card bg-white rounded-lg shadow-md overflow-hidden">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2">平板支撑</h3>
+                                <p class="text-gray-600 mb-4">强化核心肌群的等长收缩训练。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">核心</span>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">自重</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 健身计划内容 -->
+            <div id="plans-content" class="hidden fade-in">
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">健身计划生成器</h2>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition duration-150">
+                            创建新计划
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-4">计划设置</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">目标</label>
+                                    <select class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                        <option>增肌</option>
+                                        <option>减脂</option>
+                                        <option>力量提升</option>
+                                        <option>耐力训练</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">每周训练天数</label>
+                                    <select class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                        <option>3天</option>
+                                        <option>4天</option>
+                                        <option>5天</option>
+                                        <option>6天</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">训练水平</label>
+                                    <select class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                        <option>初级</option>
+                                        <option>中级</option>
+                                        <option>高级</option>
+                                    </select>
+                                </div>
+                                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition duration-150">
+                                    生成计划
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-4">生成计划预览</h3>
+                            <div class="space-y-4">
+                                <div class="border-b pb-4">
+                                    <h4 class="font-medium text-gray-900">周一: 胸肌 & 三头肌</h4>
+                                    <ul class="mt-2 space-y-2 text-sm text-gray-600">
+                                        <li>• 平板杠铃卧推 4组 x 8-12次</li>
+                                        <li>• 上斜哑铃卧推 3组 x 10-12次</li>
+                                        <li>• 双杠臂屈伸 3组 x 最大次数</li>
+                                        <li>• 绳索下压 3组 x 12-15次</li>
+                                    </ul>
+                                </div>
+                                <div class="border-b pb-4">
+                                    <h4 class="font-medium text-gray-900">周三: 背部 & 二头肌</h4>
+                                    <ul class="mt-2 space-y-2 text-sm text-gray-600">
+                                        <li>• 引体向上 4组 x 最大次数</li>
+                                        <li>• 杠铃划船 3组 x 8-12次</li>
+                                        <li>• 高位下拉 3组 x 10-12次</li>
+                                        <li>• 杠铃弯举 3组 x 10-12次</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">周五: 腿部 & 核心</h4>
+                                    <ul class="mt-2 space-y-2 text-sm text-gray-600">
+                                        <li>• 深蹲 4组 x 6-10次</li>
+                                        <li>• 罗马尼亚硬拉 3组 x 8-12次</li>
+                                        <li>• 腿举 3组 x 10-12次</li>
+                                        <li>• 平板支撑 3组 x 60秒</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">我的计划</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                                <div class="p-5">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h4 class="text-lg font-bold text-gray-900">12周增肌计划</h4>
+                                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">进行中</span>
+                                    </div>
+                                    <p class="text-gray-600 mb-4">专注于渐进式超负荷的增肌训练计划。</p>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">第4周/共12周</span>
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">查看详情</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                                <div class="p-5">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h4 class="text-lg font-bold text-gray-900">8周减脂计划</h4>
+                                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">已完成</span>
+                                    </div>
+                                    <p class="text-gray-600 mb-4">结合力量训练和HIIT的减脂计划。</p>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">8周/共8周</span>
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">查看详情</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                                <div class="p-5">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h4 class="text-lg font-bold text-gray-900">力量提升计划</h4>
+                                        <span class="bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded">未开始</span>
+                                    </div>
+                                    <p class="text-gray-600 mb-4">专注于5大项的力量提升计划。</p>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">0周/共6周</span>
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">开始计划</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 进度追踪内容 -->
+            <div id="progress-content" class="hidden fade-in">
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">进度追踪</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4">体重变化</h3>
+                            <div class="h-64 bg-gray-50 rounded flex items-center justify-center text-gray-400">
+                                [体重变化图表]
+                            </div>
+                            <div class="mt-4 flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm text-gray-500">当前体重</p>
+                                    <p class="text-xl font-bold">75.5 kg</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">变化</p>
+                                    <p class="text-xl font-bold text-green-600">-0.5 kg</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4">力量进步</h3>
+                            <div class="h-64 bg-gray-50 rounded flex items-center justify-center text-gray-400">
+                                [力量进步图表]
+                            </div>
+                            <div class="mt-4 space-y-3">
+                                <div>
+                                    <p class="text-sm text-gray-500">深蹲 1RM</p>
+                                    <p class="text-lg font-bold">120 kg <span class="text-green-600 text-sm">(+5 kg)</span></p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">卧推 1RM</p>
+                                    <p class="text-lg font-bold">85 kg <span class="text-green-600 text-sm">(+2.5 kg)</span></p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">硬拉 1RM</p>
+                                    <p class="text-lg font-bold">140 kg <span class="text-green-600 text-sm">(+7.5 kg)</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4">训练频率</h3>
+                            <div class="h-64 bg-gray-50 rounded flex items-center justify-center text-gray-400">
+                                [训练频率图表]
+                            </div>
+                            <div class="mt-4 flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm text-gray-500">本周训练</p>
+                                    <p class="text-xl font-bold">3 次</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">平均时长</p>
+                                    <p class="text-xl font-bold">52 分钟</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">训练记录</h3>
+                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">添加记录</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练类型</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时长</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2023-05-15</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">胸肌 & 三头肌</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">55 分钟</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">完成</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <a href="#" class="text-blue-600 hover:text-blue-900">详情</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2023-05-13</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">背部 & 二头肌</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">60 分钟</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">完成</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <a href="#" class="text-blue-600 hover:text-blue-900">详情</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2023-05-11</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">腿部 & 核心</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">65 分钟</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">完成</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <a href="#" class="text-blue-600 hover:text-blue-900">详情</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 登录/注册切换
+        const showRegister = document.getElementById('show-register');
+        const showLogin = document.getElementById('show-login');
+        const loginPage = document.getElementById('login-page');
+        const registerPage = document.getElementById('register-page');
+        
+        showRegister.addEventListener('click', function(e) {
+            e.preventDefault();
+            loginPage.classList.add('hidden');
+            registerPage.classList.remove('hidden');
+        });
+        
+        showLogin.addEventListener('click', function(e) {
+            e.preventDefault();
+            registerPage.classList.add('hidden');
+            loginPage.classList.remove('hidden');
+        });
+        
+        // 登录表单提交
+        const loginForm = loginPage.querySelector('form');
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loginPage.classList.add('hidden');
+            registerPage.classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        });
+        
+        // 注册表单提交
+        const registerForm = registerPage.querySelector('form');
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            registerPage.classList.add('hidden');
+            loginPage.classList.remove('hidden');
+        });
+        
+        // 导航切换
+        const navLinks = document.querySelectorAll('nav a[data-page]');
+        const contentSections = {
+            'home': document.getElementById('home-content'),
+            'workouts': document.getElementById('workouts-content'),
+            'plans': document.getElementById('plans-content'),
+            'progress': document.getElementById('progress-content')
+        };
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // 更新导航样式
+                navLinks.forEach(navLink => {
+                    navLink.classList.remove('active-tab', 'border-blue-500', 'text-gray-900');
+                    navLink.classList.add('border-transparent', 'text-gray-500');
+                });
+                
+                this.classList.add('active-tab', 'border-blue-500', 'text-gray-900');
+                this.classList.remove('border-transparent', 'text-gray-500');
+                
+                // 隐藏所有内容区域
+                Object.values(contentSections).forEach(section => {
+                    section.classList.add('hidden');
+                });
+                
+                // 显示选中的内容区域
+                const page = this.getAttribute('data-page');
+                contentSections[page].classList.remove('hidden');
+            });
+        });
+        
+        // 运动数据库筛选
+        const exerciseFilters = document.querySelectorAll('.exercise-filter');
+        exerciseFilters.forEach(filter => {
+            filter.addEventListener('click', function() {
+                exerciseFilters.forEach(f => f.classList.remove('active', 'bg-blue-600', 'text-white'));
+                this.classList.add('active', 'bg-blue-600', 'text-white');
+                
+                // 这里可以添加实际的筛选逻辑
+                // 例如根据选择的肌肉群筛选显示的运动卡片
+            });
+        });
+    });
+    </script>
+</body>
+</html>
+
+
