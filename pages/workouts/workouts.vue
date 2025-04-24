@@ -5,12 +5,9 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
-				<view class="nav-item active">运动数据库</view>
-				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
-			</view>
-			<view class="record-btn">
-				<button class="btn btn-primary" @tap="recordWorkout">记录训练</button>
+				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
+				<view class="nav-item active">训练数据库</view>
 			</view>
 		</view>
 		
@@ -201,15 +198,6 @@ export default {
 	}
 }
 
-.record-btn {
-	.btn {
-		font-size: 26rpx;
-		height: 70rpx;
-		line-height: 70rpx;
-		padding: 0 30rpx;
-	}
-}
-
 .content-container {
 	width: 80%;
 	margin: 0 auto;
@@ -316,10 +304,6 @@ export default {
 		padding: 10rpx;
 		margin: 0 5rpx;
 		font-size: 24rpx;
-	}
-	
-	.record-btn {
-		display: none;
 	}
 }
 </style> 

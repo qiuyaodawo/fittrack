@@ -5,41 +5,47 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
-				<view class="nav-item" @tap="navigateTo('workouts')">运动数据库</view>
-				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item active">进度追踪</view>
-			</view>
-			<view class="record-btn">
-				<button class="btn btn-primary" @tap="recordWorkout">记录训练</button>
+				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
+				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
 		</view>
 		
 		<view class="content-container">
 			<view class="stats-grid">
 				<view class="card stat-card">
-					<text class="stat-card-title">体重变化</text>
-					<view class="chart-placeholder">
-						<text class="chart-text">体重变化图表</text>
-						<text class="chart-desc">暂未实现图表功能</text>
-					</view>
-					<view class="stat-card-info">
-						<view class="stat-info-item">
-							<text class="stat-info-label">当前体重</text>
-							<text class="stat-info-value">75.5 kg</text>
+					<text class="stat-card-title">个人记录</text>
+					<view class="personal-records">
+						<view class="pr-item">
+							<text class="pr-exercise">卧推</text>
+							<text class="pr-weight">90 kg</text>
+							<text class="pr-date">2025-04-08</text>
 						</view>
-						<view class="stat-info-item">
-							<text class="stat-info-label">变化</text>
-							<text class="stat-info-value text-success">-0.5 kg</text>
+						<view class="pr-item">
+							<text class="pr-exercise">深蹲</text>
+							<text class="pr-weight">120 kg</text>
+							<text class="pr-date">2025-03-22</text>
+						</view>
+						<view class="pr-item">
+							<text class="pr-exercise">硬拉</text>
+							<text class="pr-weight">145 kg</text>
+							<text class="pr-date">2025-04-01</text>
+						</view>
+						<view class="pr-item">
+							<text class="pr-exercise">肩推</text>
+							<text class="pr-weight">65 kg</text>
+							<text class="pr-date">2025-03-15</text>
+						</view>
+						<view class="pr-item">
+							<text class="pr-exercise">引体向上</text>
+							<text class="pr-weight">+25 kg</text>
+							<text class="pr-date">2025-04-05</text>
 						</view>
 					</view>
 				</view>
 				
 				<view class="card stat-card">
 					<text class="stat-card-title">力量进步</text>
-					<view class="chart-placeholder">
-						<text class="chart-text">力量进步图表</text>
-						<text class="chart-desc">暂未实现图表功能</text>
-					</view>
 					<view class="strength-stats">
 						<view class="strength-item">
 							<text class="strength-label">深蹲 1RM</text>
@@ -53,15 +59,19 @@
 							<text class="strength-label">硬拉 1RM</text>
 							<text class="strength-value">140 kg <text class="text-success gain">+7.5 kg</text></text>
 						</view>
+						<view class="strength-item">
+							<text class="strength-label">肩推 1RM</text>
+							<text class="strength-value">65 kg <text class="text-success gain">+2.5 kg</text></text>
+						</view>
+						<view class="strength-item">
+							<text class="strength-label">引体向上 1RM</text>
+							<text class="strength-value">体重+25 kg <text class="text-success gain">+5 kg</text></text>
+						</view>
 					</view>
 				</view>
 				
 				<view class="card stat-card">
 					<text class="stat-card-title">训练频率</text>
-					<view class="chart-placeholder">
-						<text class="chart-text">训练频率图表</text>
-						<text class="chart-desc">暂未实现图表功能</text>
-					</view>
 					<view class="stat-card-info">
 						<view class="stat-info-item">
 							<text class="stat-info-label">本周训练</text>
@@ -69,7 +79,17 @@
 						</view>
 						<view class="stat-info-item">
 							<text class="stat-info-label">平均时长</text>
-							<text class="stat-info-value">52 分钟</text>
+							<text class="stat-info-value">70 分钟</text>
+						</view>
+					</view>
+					<view class="stat-info-row">
+						<view class="stat-info-item">
+							<text class="stat-info-label">本月训练</text>
+							<text class="stat-info-value">12 次</text>
+						</view>
+						<view class="stat-info-item">
+							<text class="stat-info-label">训练完成率</text>
+							<text class="stat-info-value text-success">92%</text>
 						</view>
 					</view>
 				</view>
@@ -145,23 +165,37 @@ export default {
 			workoutLogs: [
 				{
 					id: 1,
-					date: '2023-05-15',
+					date: '2025-04-12',
 					type: '胸肌 & 三头肌',
-					duration: '55 分钟',
+					duration: '65 分钟',
 					status: '完成'
 				},
 				{
 					id: 2,
-					date: '2023-05-13',
+					date: '2025-04-10',
 					type: '背部 & 二头肌',
-					duration: '60 分钟',
+					duration: '70 分钟',
 					status: '完成'
 				},
 				{
 					id: 3,
-					date: '2023-05-11',
+					date: '2025-04-08',
 					type: '腿部 & 核心',
-					duration: '65 分钟',
+					duration: '75 分钟',
+					status: '完成'
+				},
+				{
+					id: 4,
+					date: '2025-04-05',
+					type: '肩部 & 手臂',
+					duration: '60 分钟',
+					status: '完成'
+				},
+				{
+					id: 5,
+					date: '2025-04-03',
+					type: '全身训练',
+					duration: '80 分钟',
 					status: '完成'
 				}
 			]
@@ -273,15 +307,6 @@ export default {
 		border-bottom: 4rpx solid var(--primary-color);
 		color: var(--primary-color);
 		font-weight: 500;
-	}
-}
-
-.record-btn {
-	.btn {
-		font-size: 26rpx;
-		height: 70rpx;
-		line-height: 70rpx;
-		padding: 0 30rpx;
 	}
 }
 
@@ -504,6 +529,51 @@ export default {
 	background-color: #fff;
 }
 
+.personal-records {
+	display: flex;
+	flex-direction: column;
+	gap: 18rpx;
+}
+
+.pr-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16rpx 0;
+	border-bottom: 2rpx solid #f1f5f9;
+}
+
+.pr-item:last-child {
+	border-bottom: none;
+}
+
+.pr-exercise {
+	font-size: 28rpx;
+	font-weight: 500;
+	flex: 2;
+}
+
+.pr-weight {
+	font-size: 30rpx;
+	font-weight: bold;
+	color: var(--primary-color);
+	flex: 1;
+	text-align: center;
+}
+
+.pr-date {
+	font-size: 24rpx;
+	color: var(--text-color-light);
+	flex: 1.5;
+	text-align: right;
+}
+
+.stat-info-row {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 20rpx;
+}
+
 @media screen and (max-width: 768px) {
 	.top-nav {
 		flex-direction: column;
@@ -524,10 +594,6 @@ export default {
 		padding: 10rpx;
 		margin: 0 5rpx;
 		font-size: 24rpx;
-	}
-	
-	.record-btn {
-		display: none;
 	}
 	
 	.input-row {

@@ -9,7 +9,14 @@
 			<form @submit="handleLogin">
 				<view class="form-group">
 					<input type="text" class="input" v-model="email" placeholder="邮箱地址" />
-					<input type="password" class="input" v-model="password" placeholder="密码" />
+					<view class="password-input-container">
+						<input 
+							type="password"
+							class="input password-input" 
+							v-model="password" 
+							placeholder="密码" 
+						/>
+					</view>
 				</view>
 				
 				<view class="form-options flex-row justify-between align-center">
@@ -127,6 +134,14 @@ export default {
 .input {
 	height: 80rpx;
 	margin-bottom: 20rpx;
+}
+
+.password-input-container {
+	position: relative;
+}
+
+.password-input {
+	padding-right: 20rpx;
 }
 
 .form-options {

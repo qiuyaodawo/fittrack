@@ -5,12 +5,9 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
-				<view class="nav-item" @tap="navigateTo('workouts')">运动数据库</view>
-				<view class="nav-item active">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
-			</view>
-			<view class="record-btn">
-				<button class="btn btn-primary" @tap="recordWorkout">记录训练</button>
+				<view class="nav-item active">健身计划</view>
+				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
 		</view>
 		
@@ -84,6 +81,47 @@
 				</view>
 			</view>
 		</view>
+		
+		<!-- 创建新计划弹窗 -->
+		<view class="modal" v-if="showCreatePlanModal" @tap.self="closeModal">
+			<view class="modal-content">
+				<view class="modal-header">
+					<text class="modal-title">创建新计划</text>
+					<view class="modal-close" @tap="closeModal">×</view>
+				</view>
+				
+				<view class="modal-body">
+					<view class="form-item">
+						<text class="form-label">计划名称</text>
+						<input type="text" class="input" v-model="newPlan.title" placeholder="请输入计划名称" />
+					</view>
+					
+					<view class="form-item">
+						<text class="form-label">计划目标</text>
+						<picker :value="newPlan.goalIndex" :range="goals" @change="onNewPlanGoalChange">
+							<view class="picker-value">{{goals[newPlan.goalIndex]}}</view>
+						</picker>
+					</view>
+					
+					<view class="form-item">
+						<text class="form-label">计划描述</text>
+						<textarea class="textarea" v-model="newPlan.description" placeholder="请输入计划描述" />
+					</view>
+					
+					<view class="form-item">
+						<text class="form-label">计划周期</text>
+						<picker :value="newPlan.durationIndex" :range="planDurations" @change="onDurationChange">
+							<view class="picker-value">{{planDurations[newPlan.durationIndex]}}</view>
+						</picker>
+					</view>
+				</view>
+				
+				<view class="modal-footer">
+					<button class="btn btn-secondary" @tap="closeModal">取消</button>
+					<button class="btn btn-primary" @tap="confirmCreatePlan">确认创建</button>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -102,6 +140,16 @@ export default {
 			
 			showPreview: false,
 			previewPlan: [],
+			
+			// 创建新计划相关数据
+			showCreatePlanModal: false,
+			planDurations: ['4周', '8周', '12周', '16周'],
+			newPlan: {
+				title: '',
+				description: '',
+				goalIndex: 0,
+				durationIndex: 1
+			},
 			
 			myPlans: [
 				{
@@ -155,11 +203,58 @@ export default {
 		onLevelChange(e) {
 			this.levelIndex = e.detail.value;
 		},
+		// 创建新计划方法
 		createPlan() {
+			// 打开创建计划弹窗
+			this.showCreatePlanModal = true;
+		},
+		closeModal() {
+			this.showCreatePlanModal = false;
+		},
+		onNewPlanGoalChange(e) {
+			this.newPlan.goalIndex = e.detail.value;
+		},
+		onDurationChange(e) {
+			this.newPlan.durationIndex = e.detail.value;
+		},
+		confirmCreatePlan() {
+			// 验证表单
+			if (!this.newPlan.title) {
+				uni.showToast({
+					title: '请输入计划名称',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			// 创建新计划
+			const newPlanObj = {
+				id: this.myPlans.length + 1,
+				title: this.newPlan.title,
+				description: this.newPlan.description || `这是一个${this.planDurations[this.newPlan.durationIndex]}的${this.goals[this.newPlan.goalIndex]}计划。`,
+				status: '未开始',
+				statusClass: 'warning',
+				progress: `0周/共${this.planDurations[this.newPlan.durationIndex].replace('周', '')}周`,
+				actionText: '开始计划'
+			};
+			
+			// 添加到我的计划列表
+			this.myPlans.unshift(newPlanObj);
+			
+			// 提示用户
 			uni.showToast({
-				title: '功能开发中',
-				icon: 'none'
+				title: '计划创建成功',
+				icon: 'success'
 			});
+			
+			// 重置表单并关闭弹窗
+			this.newPlan = {
+				title: '',
+				description: '',
+				goalIndex: 0,
+				durationIndex: 1
+			};
+			this.closeModal();
 		},
 		generatePlan() {
 			// 模拟生成计划
@@ -338,15 +433,6 @@ export default {
 	}
 }
 
-.record-btn {
-	.btn {
-		font-size: 26rpx;
-		height: 70rpx;
-		line-height: 70rpx;
-		padding: 0 30rpx;
-	}
-}
-
 .content-container {
 	width: 80%;
 	margin: 0 auto;
@@ -522,13 +608,82 @@ export default {
 		font-size: 24rpx;
 	}
 	
-	.record-btn {
-		display: none;
-	}
-	
 	.content-container {
 		width: 90%;
 		padding: 20rpx;
 	}
+}
+
+/* 弹窗样式 */
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.modal-content {
+	width: 80%;
+	max-width: 600rpx;
+	background-color: #fff;
+	border-radius: 12rpx;
+	overflow: hidden;
+	box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+	padding: 30rpx;
+	border-bottom: 2rpx solid var(--border-color);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.modal-title {
+	font-size: 36rpx;
+	font-weight: bold;
+}
+
+.modal-close {
+	font-size: 40rpx;
+	color: var(--text-color-light);
+	cursor: pointer;
+}
+
+.modal-body {
+	padding: 30rpx;
+	max-height: 70vh;
+	overflow-y: auto;
+}
+
+.modal-footer {
+	padding: 20rpx 30rpx;
+	border-top: 2rpx solid var(--border-color);
+	display: flex;
+	justify-content: flex-end;
+}
+
+.modal-footer .btn {
+	margin-left: 20rpx;
+}
+
+.btn-secondary {
+	background-color: #e0e0e0;
+	color: var(--text-color);
+}
+
+.textarea {
+	width: 100%;
+	height: 200rpx;
+	padding: 20rpx;
+	border: 2rpx solid var(--border-color);
+	border-radius: 8rpx;
+	box-sizing: border-box;
 }
 </style> 

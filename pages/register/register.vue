@@ -9,8 +9,22 @@
 			<form @submit="handleRegister">
 				<view class="form-group">
 					<input type="text" class="input" v-model="email" placeholder="邮箱地址" />
-					<input type="password" class="input" v-model="password" placeholder="密码" />
-					<input type="password" class="input" v-model="confirmPassword" placeholder="确认密码" />
+					<view class="password-input-container">
+						<input 
+							type="password"
+							class="input password-input" 
+							v-model="password" 
+							placeholder="密码" 
+						/>
+					</view>
+					<view class="password-input-container">
+						<input 
+							type="password"
+							class="input password-input" 
+							v-model="confirmPassword" 
+							placeholder="确认密码" 
+						/>
+					</view>
 				</view>
 				
 				<view class="form-options flex-row align-center">
@@ -103,10 +117,11 @@ export default {
 }
 
 .register-card {
-	width: 100%;
+	width: 85%;
+	max-width: 600rpx;
 	background-color: var(--card-bg-color);
 	border-radius: 20rpx;
-	padding: 50rpx 40rpx;
+	padding: 40rpx 30rpx;
 	box-shadow: 0 8rpx 40rpx rgba(0, 0, 0, 0.08);
 }
 
@@ -114,32 +129,50 @@ export default {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: 60rpx;
+	margin-bottom: 40rpx;
 }
 
 .app-title {
-	font-size: 56rpx;
+	font-size: 48rpx;
 	font-weight: bold;
 	color: var(--primary-color);
-	margin-bottom: 10rpx;
+	margin-bottom: 8rpx;
 }
 
 .app-subtitle {
-	font-size: 28rpx;
+	font-size: 26rpx;
 	color: var(--text-color-light);
 }
 
 .form-group {
-	margin-bottom: 30rpx;
+	margin-bottom: 20rpx;
+}
+
+.input {
+	height: 80rpx;
+	margin-bottom: 20rpx;
+}
+
+.password-input-container {
+	position: relative;
+}
+
+.password-input {
+	padding-right: 20rpx;
 }
 
 .form-options {
-	margin-bottom: 40rpx;
+	margin-bottom: 30rpx;
 }
 
 .login-link {
-	margin-top: 40rpx;
+	margin-top: 30rpx;
 	text-align: center;
-	font-size: 28rpx;
+	font-size: 26rpx;
+}
+
+.btn {
+	height: 80rpx;
+	line-height: 80rpx;
 }
 </style> 
