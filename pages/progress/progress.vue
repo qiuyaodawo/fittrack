@@ -9,64 +9,44 @@
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
+			<view class="nav-actions">
+				<!-- 右侧占位符，保持布局平衡 -->
+			</view>
 		</view>
 		
 		<view class="content-container">
 			<view class="stats-grid">
 				<view class="card stat-card">
 					<text class="stat-card-title">个人记录</text>
-					<view class="personal-records">
-						<view class="pr-item">
-							<text class="pr-exercise">卧推</text>
-							<text class="pr-weight">90 kg</text>
-							<text class="pr-date">2025-04-08</text>
+					<view class="personal-records" v-if="personalRecords.length > 0">
+						<view class="pr-item" v-for="(record, index) in personalRecords" :key="index">
+							<text class="pr-exercise">{{record.exercise}}</text>
+							<text class="pr-weight">{{record.weight}}</text>
+							<text class="pr-date">{{record.date}}</text>
 						</view>
-						<view class="pr-item">
-							<text class="pr-exercise">深蹲</text>
-							<text class="pr-weight">120 kg</text>
-							<text class="pr-date">2025-03-22</text>
-						</view>
-						<view class="pr-item">
-							<text class="pr-exercise">硬拉</text>
-							<text class="pr-weight">145 kg</text>
-							<text class="pr-date">2025-04-01</text>
-						</view>
-						<view class="pr-item">
-							<text class="pr-exercise">肩推</text>
-							<text class="pr-weight">65 kg</text>
-							<text class="pr-date">2025-03-15</text>
-						</view>
-						<view class="pr-item">
-							<text class="pr-exercise">引体向上</text>
-							<text class="pr-weight">+25 kg</text>
-							<text class="pr-date">2025-04-05</text>
-						</view>
+					</view>
+					<view class="empty-records" v-else>
+						<text class="empty-text">暂无个人记录</text>
+						<text class="empty-desc">完成训练后会自动更新记录</text>
 					</view>
 				</view>
 				
 				<view class="card stat-card">
 					<text class="stat-card-title">力量进步</text>
-					<view class="strength-stats">
-						<view class="strength-item">
-							<text class="strength-label">深蹲 1RM</text>
-							<text class="strength-value">120 kg <text class="text-success gain">+5 kg</text></text>
+					<view class="strength-stats" v-if="strengthProgress.length > 0">
+						<view class="strength-item" v-for="(progress, index) in strengthProgress" :key="index">
+							<text class="strength-label">{{progress.exercise}} 1RM</text>
+							<text class="strength-value">
+								{{progress.current}} 
+								<text :class="progress.change > 0 ? 'text-success gain' : progress.change < 0 ? 'text-error loss' : 'text-gray'" v-if="progress.change !== 0">
+									{{progress.change > 0 ? '+' : ''}}{{progress.change}} kg
+								</text>
+							</text>
 						</view>
-						<view class="strength-item">
-							<text class="strength-label">卧推 1RM</text>
-							<text class="strength-value">85 kg <text class="text-success gain">+2.5 kg</text></text>
-						</view>
-						<view class="strength-item">
-							<text class="strength-label">硬拉 1RM</text>
-							<text class="strength-value">140 kg <text class="text-success gain">+7.5 kg</text></text>
-						</view>
-						<view class="strength-item">
-							<text class="strength-label">肩推 1RM</text>
-							<text class="strength-value">65 kg <text class="text-success gain">+2.5 kg</text></text>
-						</view>
-						<view class="strength-item">
-							<text class="strength-label">引体向上 1RM</text>
-							<text class="strength-value">体重+25 kg <text class="text-success gain">+5 kg</text></text>
-						</view>
+					</view>
+					<view class="empty-records" v-else>
+						<text class="empty-text">暂无力量数据</text>
+						<text class="empty-desc">记录训练数据后会显示进步情况</text>
 					</view>
 				</view>
 				
@@ -75,21 +55,21 @@
 					<view class="stat-card-info">
 						<view class="stat-info-item">
 							<text class="stat-info-label">本周训练</text>
-							<text class="stat-info-value">3 次</text>
+							<text class="stat-info-value">{{trainingStats.thisWeek}} 次</text>
 						</view>
 						<view class="stat-info-item">
 							<text class="stat-info-label">平均时长</text>
-							<text class="stat-info-value">70 分钟</text>
+							<text class="stat-info-value">{{trainingStats.avgDuration}}</text>
 						</view>
 					</view>
 					<view class="stat-info-row">
 						<view class="stat-info-item">
 							<text class="stat-info-label">本月训练</text>
-							<text class="stat-info-value">12 次</text>
+							<text class="stat-info-value">{{trainingStats.thisMonth}} 次</text>
 						</view>
 						<view class="stat-info-item">
-							<text class="stat-info-label">训练完成率</text>
-							<text class="stat-info-value text-success">92%</text>
+							<text class="stat-info-label">总训练次数</text>
+							<text class="stat-info-value text-success">{{trainingStats.total}} 次</text>
 						</view>
 					</view>
 				</view>
@@ -148,6 +128,14 @@
 						<button class="btn-sm btn-primary" @tap="recordMaxWeight">记录</button>
 					</view>
 				</view>
+				
+				<view class="form-group">
+					<text class="form-label">快速测试</text>
+					<view class="test-buttons">
+						<button class="btn-sm btn-outline" @tap="generateTestData">生成测试数据</button>
+						<button class="btn-sm btn-outline" @tap="clearAllData">清空所有数据</button>
+					</view>
+				</view>
 			</view>
 		</view>
 	</view>
@@ -160,46 +148,74 @@ export default {
 			weightInput: '',
 			maxWeightInput: '',
 			exerciseIndex: 0,
-			exercises: ['深蹲', '卧推', '硬拉', '肩推', '引体向上'],
+			exercises: ['深蹲', '卧推', '硬拉', '肩推', '引体向上', '杠铃划船', '高位下拉', '腿举', '侧平举', '杠铃弯举', '三头肌下压', '哑铃飞鸟', '平板支撑'],
 			
-			workoutLogs: [
-				{
-					id: 1,
-					date: '2025-04-12',
-					type: '胸肌 & 三头肌',
-					duration: '65 分钟',
-					status: '完成'
-				},
-				{
-					id: 2,
-					date: '2025-04-10',
-					type: '背部 & 二头肌',
-					duration: '70 分钟',
-					status: '完成'
-				},
-				{
-					id: 3,
-					date: '2025-04-08',
-					type: '腿部 & 核心',
-					duration: '75 分钟',
-					status: '完成'
-				},
-				{
-					id: 4,
-					date: '2025-04-05',
-					type: '肩部 & 手臂',
-					duration: '60 分钟',
-					status: '完成'
-				},
-				{
-					id: 5,
-					date: '2025-04-03',
-					type: '全身训练',
-					duration: '80 分钟',
-					status: '完成'
-				}
-			]
+			workoutLogs: [],
+			personalRecords: [],
+			strengthProgress: [],
+			trainingStats: {
+				thisWeek: 0,
+				thisMonth: 0,
+				total: 0,
+				avgDuration: '0 分钟'
+			},
+			
+			// 动作名称映射，用于统一不同写法的动作名
+			exerciseMapping: {
+				'杠铃卧推': '卧推',
+				'哑铃卧推': '卧推',
+				'上斜卧推': '卧推',
+				'下斜卧推': '卧推',
+				'平板卧推': '卧推',
+				'卧推': '卧推',
+				'哑铃飞鸟': '哑铃飞鸟',
+				'俯卧撑': '俯卧撑',
+				'双杠臂屈伸': '双杠臂屈伸',
+				'引体向上': '引体向上',
+				'杠铃划船': '杠铃划船',
+				'哑铃划船': '杠铃划船',
+				'高位下拉': '高位下拉',
+				'坐姿划船': '杠铃划船',
+				'T杠划船': '杠铃划船',
+				'面拉': '面拉',
+				'杠铃深蹲': '深蹲',
+				'前蹲': '深蹲',
+				'哑铃深蹲': '深蹲',
+				'保加利亚深蹲': '深蹲',
+				'深蹲': '深蹲',
+				'腿举': '腿举',
+				'罗马尼亚硬拉': '硬拉',
+				'硬拉': '硬拉',
+				'杠铃硬拉': '硬拉',
+				'杠铃肩推': '肩推',
+				'哑铃肩推': '肩推',
+				'肩推': '肩推',
+				'侧平举': '侧平举',
+				'前平举': '前平举',
+				'阿诺德推举': '肩推',
+				'倒立撑': '倒立撑',
+				'杠铃弯举': '杠铃弯举',
+				'哑铃弯举': '杠铃弯举',
+				'锤式弯举': '杠铃弯举',
+				'窄距卧推': '窄距卧推',
+				'三头肌下压': '三头肌下压',
+				'臂屈伸': '三头肌下压',
+				'平板支撑': '平板支撑',
+				'卷腹': '卷腹',
+				'俄罗斯转体': '俄罗斯转体',
+				'登山者': '登山者',
+				'死虫': '死虫',
+				'鸟狗式': '鸟狗式',
+				'仰卧起坐': '卷腹'
+			}
 		}
+	},
+	onShow() {
+		// 页面显示时加载训练记录和更新统计数据
+		this.loadWorkoutHistory();
+		this.updatePersonalRecordsWithManualData();
+		this.updateStrengthProgress();
+		this.updateTrainingStats();
 	},
 	methods: {
 		navigateTo(page) {
@@ -225,9 +241,60 @@ export default {
 				return;
 			}
 			
+			const weight = parseFloat(this.weightInput);
+			if (isNaN(weight) || weight <= 0) {
+				uni.showToast({
+					title: '请输入有效的体重',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			// 保存体重记录
+			const currentDate = new Date().toISOString().split('T')[0];
+			const weightHistory = uni.getStorageSync('weightHistory') || [];
+			
+			// 添加新的体重记录
+			const newWeightRecord = {
+				weight: weight,
+				date: currentDate,
+				timestamp: Date.now()
+			};
+			
+			// 检查今天是否已有记录，如果有则更新，没有则添加
+			const todayIndex = weightHistory.findIndex(record => record.date === currentDate);
+			if (todayIndex !== -1) {
+				weightHistory[todayIndex] = newWeightRecord;
+			} else {
+				weightHistory.push(newWeightRecord);
+			}
+			
+			// 按日期排序（最新的在前面）
+			weightHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+			
+			// 保存到本地存储
+			uni.setStorageSync('weightHistory', weightHistory);
+			
+			// 计算体重变化
+			let weightChange = '';
+			if (weightHistory.length >= 2) {
+				const currentWeight = weightHistory[0].weight;
+				const previousWeight = weightHistory[1].weight;
+				const change = currentWeight - previousWeight;
+				
+				if (change > 0) {
+					weightChange = ` (+${change.toFixed(1)}kg)`;
+				} else if (change < 0) {
+					weightChange = ` (${change.toFixed(1)}kg)`;
+				} else {
+					weightChange = ' (无变化)';
+				}
+			}
+			
 			uni.showToast({
-				title: '体重记录成功',
-				icon: 'success'
+				title: `体重记录成功: ${weight}kg${weightChange}`,
+				icon: 'success',
+				duration: 2000
 			});
 			
 			this.weightInput = '';
@@ -241,23 +308,451 @@ export default {
 				return;
 			}
 			
-			uni.showToast({
-				title: `${this.exercises[this.exerciseIndex]}记录成功`,
-				icon: 'success'
-			});
+			const weight = parseFloat(this.maxWeightInput);
+			if (isNaN(weight) || weight <= 0) {
+				uni.showToast({
+					title: '请输入有效的重量',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			// 保存手动记录的最大重量
+			const exerciseName = this.exercises[this.exerciseIndex];
+			const standardExerciseName = this.getStandardExerciseName(exerciseName) || exerciseName;
+			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			const currentDate = new Date().toISOString().split('T')[0];
+			
+			// 检查是否是新记录
+			let isNewRecord = false;
+			if (!savedRecords[standardExerciseName] || weight > savedRecords[standardExerciseName].weight) {
+				isNewRecord = true;
+				savedRecords[standardExerciseName] = {
+					weight: weight,
+					date: currentDate
+				};
+				uni.setStorageSync('personalRecords', savedRecords);
+				
+				// 如果是新记录，显示庆祝效果
+				if (isNewRecord) {
+					uni.showModal({
+						title: '🎉 恭喜！',
+						content: `您在 ${standardExerciseName} 上创造了新的个人记录：${weight}kg！`,
+						showCancel: false,
+						confirmText: '太棒了！',
+						confirmColor: '#3b82f6'
+					});
+				}
+			}
+			
+			// 重新计算并更新个人记录（合并训练记录和手动记录）
+			this.updatePersonalRecordsWithManualData();
+			this.updateStrengthProgress();
+			
+			let message = `${standardExerciseName}记录成功`;
+			if (isNewRecord) {
+				message += ' - 新个人记录!';
+			}
+			
+			if (!isNewRecord) {
+				uni.showToast({
+					title: message,
+					icon: 'success',
+					duration: 2000
+				});
+			}
 			
 			this.maxWeightInput = '';
 		},
+		loadWorkoutHistory() {
+			// 从本地存储加载训练记录
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			this.workoutLogs = workoutHistory.map(workout => ({
+				id: workout.id,
+				date: workout.date,
+				type: workout.name,
+				duration: workout.duration,
+				status: workout.status
+			}));
+		},
+		
+		// 更新个人记录（合并训练记录和手动记录）
+		updatePersonalRecordsWithManualData() {
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			let records = {};
+			let hasNewRecord = false;
+			
+			// 首先加载已保存的手动记录
+			Object.keys(savedRecords).forEach(exerciseName => {
+				records[exerciseName] = {
+					weight: savedRecords[exerciseName].weight,
+					date: savedRecords[exerciseName].date,
+					isNew: this.isRecentDate(savedRecords[exerciseName].date)
+				};
+			});
+			
+			// 然后从训练记录中提取每个动作的最大重量
+			workoutHistory.forEach(workout => {
+				if (workout.exercises && workout.exercises.length > 0) {
+					workout.exercises.forEach(exercise => {
+						const exerciseName = this.getStandardExerciseName(exercise.name);
+						if (exerciseName && exercise.sets && exercise.sets.length > 0) {
+							exercise.sets.forEach(set => {
+								const weight = parseFloat(set.weight);
+								if (!isNaN(weight) && weight > 0) {
+									// 比较训练记录中的重量和已保存的记录
+									if (!records[exerciseName] || weight > records[exerciseName].weight) {
+										// 检查是否是新记录
+										const isNewRecord = !savedRecords[exerciseName] || weight > savedRecords[exerciseName].weight;
+										if (isNewRecord) hasNewRecord = true;
+										
+										records[exerciseName] = {
+											weight: weight,
+											date: workout.date,
+											isNew: isNewRecord && this.isRecentDate(workout.date)
+										};
+									}
+								}
+							});
+						}
+					});
+				}
+			});
+			
+			// 转换为数组格式并排序
+			this.personalRecords = Object.keys(records)
+				.map(exerciseName => ({
+					exercise: exerciseName,
+					weight: records[exerciseName].weight + ' kg',
+					date: records[exerciseName].date,
+					isNew: records[exerciseName].isNew
+				}))
+				.sort((a, b) => parseFloat(b.weight) - parseFloat(a.weight));
+			
+			// 更新保存的记录（保持手动记录和训练记录的最高值）
+			const recordsToSave = {};
+			Object.keys(records).forEach(key => {
+				recordsToSave[key] = {
+					weight: records[key].weight,
+					date: records[key].date
+				};
+			});
+			uni.setStorageSync('personalRecords', recordsToSave);
+			
+			// 如果有新记录，3秒后清除新记录标识
+			if (hasNewRecord) {
+				setTimeout(() => {
+					this.personalRecords.forEach(record => {
+						record.isNew = false;
+					});
+				}, 3000);
+			}
+		},
+		
+		// 更新个人记录（仅基于训练记录）
+		updatePersonalRecords() {
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			let records = {};
+			let hasNewRecord = false;
+			
+			// 从训练记录中提取每个动作的最大重量
+			workoutHistory.forEach(workout => {
+				if (workout.exercises && workout.exercises.length > 0) {
+					workout.exercises.forEach(exercise => {
+						const exerciseName = this.getStandardExerciseName(exercise.name);
+						if (exerciseName && exercise.sets && exercise.sets.length > 0) {
+							exercise.sets.forEach(set => {
+								const weight = parseFloat(set.weight);
+								if (!isNaN(weight) && weight > 0) {
+									if (!records[exerciseName] || weight > records[exerciseName].weight) {
+										// 检查是否是新记录
+										const isNewRecord = !savedRecords[exerciseName] || weight > savedRecords[exerciseName].weight;
+										if (isNewRecord) hasNewRecord = true;
+										
+										records[exerciseName] = {
+											weight: weight,
+											date: workout.date,
+											isNew: isNewRecord && this.isRecentDate(workout.date)
+										};
+									}
+								}
+							});
+						}
+					});
+				}
+			});
+			
+			// 转换为数组格式并排序
+			this.personalRecords = Object.keys(records)
+				.map(exerciseName => ({
+					exercise: exerciseName,
+					weight: records[exerciseName].weight + ' kg',
+					date: records[exerciseName].date,
+					isNew: records[exerciseName].isNew
+				}))
+				.sort((a, b) => parseFloat(b.weight) - parseFloat(a.weight));
+			
+			// 保存到本地存储
+			const recordsToSave = {};
+			Object.keys(records).forEach(key => {
+				recordsToSave[key] = {
+					weight: records[key].weight,
+					date: records[key].date
+				};
+			});
+			uni.setStorageSync('personalRecords', recordsToSave);
+			
+			// 如果有新记录，3秒后清除新记录标识
+			if (hasNewRecord) {
+				setTimeout(() => {
+					this.personalRecords.forEach(record => {
+						record.isNew = false;
+					});
+				}, 3000);
+			}
+		},
+		
+		// 更新力量进步统计
+		updateStrengthProgress() {
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const savedProgress = uni.getStorageSync('strengthProgress') || {};
+			
+			// 获取当前个人记录
+			const currentRecords = {};
+			this.personalRecords.forEach(record => {
+				currentRecords[record.exercise] = parseFloat(record.weight);
+			});
+			
+			// 计算进步情况
+			this.strengthProgress = Object.keys(currentRecords).map(exerciseName => {
+				const current = currentRecords[exerciseName];
+				const previous = savedProgress[exerciseName] || current;
+				const change = current - previous;
+				
+				return {
+					exercise: exerciseName,
+					current: current + ' kg',
+					change: Math.round(change * 10) / 10,
+					previousWeight: previous
+				};
+			});
+			
+			// 更新保存的进度数据
+			const progressToSave = {};
+			Object.keys(currentRecords).forEach(key => {
+				progressToSave[key] = currentRecords[key];
+			});
+			uni.setStorageSync('strengthProgress', progressToSave);
+		},
+		
+		// 更新训练统计数据
+		updateTrainingStats() {
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const now = new Date();
+			const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+			const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+			
+			let thisWeekCount = 0;
+			let thisMonthCount = 0;
+			let totalDuration = 0;
+			
+			workoutHistory.forEach(workout => {
+				const workoutDate = new Date(workout.date);
+				
+				// 统计本周训练
+				if (workoutDate >= thisWeekStart) {
+					thisWeekCount++;
+				}
+				
+				// 统计本月训练
+				if (workoutDate >= thisMonthStart) {
+					thisMonthCount++;
+				}
+				
+				// 累计训练时长
+				const duration = parseInt(workout.duration);
+				if (!isNaN(duration)) {
+					totalDuration += duration;
+				}
+			});
+			
+			// 计算平均时长
+			const avgDuration = workoutHistory.length > 0 ? Math.round(totalDuration / workoutHistory.length) : 0;
+			
+			this.trainingStats = {
+				thisWeek: thisWeekCount,
+				thisMonth: thisMonthCount,
+				total: workoutHistory.length,
+				avgDuration: avgDuration + ' 分钟'
+			};
+		},
+		
+		// 获取标准化的动作名称
+		getStandardExerciseName(name) {
+			return this.exerciseMapping[name] || null;
+		},
+		
+		// 检查日期是否为最近（用于显示新记录标识）
+		isRecentDate(dateString) {
+			const date = new Date(dateString);
+			const now = new Date();
+			const diffTime = Math.abs(now - date);
+			const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+			return diffDays <= 7; // 一周内的记录显示为新记录
+		},
 		addWorkoutLog() {
-			uni.showToast({
-				title: '功能开发中',
-				icon: 'none'
+			uni.navigateTo({
+				url: '/pages/record/record'
 			});
 		},
 		viewLogDetails(log) {
-			uni.showToast({
-				title: '查看记录: ' + log.date,
-				icon: 'none'
+			// 查找完整的训练记录
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const fullWorkout = workoutHistory.find(workout => workout.id === log.id);
+			
+			if (fullWorkout) {
+				let detailText = `训练名称：${fullWorkout.name}\n`;
+				detailText += `训练类型：${fullWorkout.type}\n`;
+				detailText += `训练时长：${fullWorkout.duration}\n`;
+				detailText += `开始时间：${fullWorkout.startTime}\n\n`;
+				detailText += `训练动作：\n`;
+				
+				fullWorkout.exercises.forEach((exercise, index) => {
+					detailText += `${index + 1}. ${exercise.name}\n`;
+					exercise.sets.forEach((set, setIndex) => {
+						detailText += `   第${setIndex + 1}组: ${set.weight}kg × ${set.reps}次\n`;
+					});
+				});
+				
+				uni.showModal({
+					title: '训练详情',
+					content: detailText,
+					showCancel: false,
+					confirmText: '知道了'
+				});
+			} else {
+				uni.showToast({
+					title: '记录详情不存在',
+					icon: 'none'
+				});
+			}
+		},
+		
+		// 生成测试数据
+		generateTestData() {
+			uni.showModal({
+				title: '生成测试数据',
+				content: '这将生成一些示例训练记录来演示个人记录功能，确定继续吗？',
+				success: (res) => {
+					if (res.confirm) {
+						// 生成几个示例训练记录
+						const testWorkouts = [
+							{
+								id: Date.now() - 86400000 * 2,
+								name: '胸肌训练',
+								type: '力量训练',
+								date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+								startTime: '18:00',
+								exercises: [
+									{
+										name: '平板卧推',
+										sets: [
+											{ weight: '60', reps: '10', rest: '90' },
+											{ weight: '65', reps: '8', rest: '90' },
+											{ weight: '70', reps: '6', rest: '90' }
+										]
+									},
+									{
+										name: '哑铃飞鸟',
+										sets: [
+											{ weight: '20', reps: '12', rest: '60' },
+											{ weight: '22.5', reps: '10', rest: '60' }
+										]
+									}
+								],
+								status: '已完成',
+								duration: '55 分钟'
+							},
+							{
+								id: Date.now() - 86400000,
+								name: '腿部训练',
+								type: '力量训练',
+								date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+								startTime: '19:00',
+								exercises: [
+									{
+										name: '深蹲',
+										sets: [
+											{ weight: '80', reps: '12', rest: '120' },
+											{ weight: '90', reps: '10', rest: '120' },
+											{ weight: '100', reps: '8', rest: '120' }
+										]
+									},
+									{
+										name: '硬拉',
+										sets: [
+											{ weight: '120', reps: '8', rest: '180' },
+											{ weight: '130', reps: '6', rest: '180' }
+										]
+									}
+								],
+								status: '已完成',
+								duration: '65 分钟'
+							}
+						];
+						
+						// 保存测试数据
+						let workoutHistory = uni.getStorageSync('workoutHistory') || [];
+						testWorkouts.forEach(workout => {
+							workoutHistory.unshift(workout);
+						});
+						uni.setStorageSync('workoutHistory', workoutHistory);
+						
+						// 刷新页面数据
+						this.loadWorkoutHistory();
+						this.updatePersonalRecords();
+						this.updateStrengthProgress();
+						this.updateTrainingStats();
+						
+						uni.showToast({
+							title: '测试数据生成成功',
+							icon: 'success'
+						});
+					}
+				}
+			});
+		},
+		
+		// 清空所有数据
+		clearAllData() {
+			uni.showModal({
+				title: '清空数据',
+				content: '这将清空所有训练记录和个人记录，确定继续吗？',
+				success: (res) => {
+					if (res.confirm) {
+						uni.removeStorageSync('workoutHistory');
+						uni.removeStorageSync('personalRecords');
+						uni.removeStorageSync('strengthProgress');
+						
+						// 重置页面数据
+						this.workoutLogs = [];
+						this.personalRecords = [];
+						this.strengthProgress = [];
+						this.trainingStats = {
+							thisWeek: 0,
+							thisMonth: 0,
+							total: 0,
+							avgDuration: '0 分钟'
+						};
+						
+						uni.showToast({
+							title: '数据已清空',
+							icon: 'success'
+						});
+					}
+				}
 			});
 		}
 	}
@@ -308,6 +803,12 @@ export default {
 		color: var(--primary-color);
 		font-weight: 500;
 	}
+}
+
+.nav-actions {
+	display: flex;
+	align-items: center;
+	min-width: 120rpx; /* 确保右侧有足够的占位空间 */
 }
 
 .content-container {
@@ -518,6 +1019,59 @@ export default {
 
 .exercise-picker {
 	flex: 2;
+}
+
+
+
+// 空状态样式
+.empty-records {
+	text-align: center;
+	padding: 60rpx 20rpx;
+	color: var(--text-color-light);
+}
+
+.empty-text {
+	font-size: 28rpx;
+	margin-bottom: 10rpx;
+	display: block;
+}
+
+.empty-desc {
+	font-size: 24rpx;
+	opacity: 0.8;
+	display: block;
+}
+
+// 进步颜色样式
+.text-error {
+	color: var(--error-color);
+}
+
+.text-gray {
+	color: var(--text-color-light);
+}
+
+.loss {
+	font-size: 24rpx;
+	font-weight: normal;
+}
+
+// 测试按钮样式
+.test-buttons {
+	display: flex;
+	gap: 20rpx;
+	justify-content: center;
+}
+
+.btn-outline {
+	background-color: transparent;
+	border: 2rpx solid var(--primary-color);
+	color: var(--primary-color);
+	
+	&:active {
+		background-color: var(--primary-color);
+		color: #fff;
+	}
 }
 
 .picker-value {

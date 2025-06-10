@@ -124,7 +124,7 @@
                     </div>
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <button type="button" class="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <button type="button" class="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="showRecordWorkoutModal()">
                                 <span>记录训练</span>
                             </button>
                         </div>
@@ -639,6 +639,11 @@
             });
         });
     });
+    
+    // 记录训练功能
+    function showRecordWorkoutModal() {
+        alert('记录训练功能\n\n在uni-app版本中已实现完整的记录训练功能，包括：\n\n• 选择训练动作\n• 设置组数和次数\n• 记录重量和组间间隔\n• 保存训练记录\n• 查看训练历史\n\n请在uni-app环境中体验完整功能！');
+    }
     </script>
 </body>
 </html>

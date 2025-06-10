@@ -9,6 +9,9 @@
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
+			<view class="nav-actions">
+				<!-- 右侧占位符，保持布局平衡 -->
+			</view>
 		</view>
 		
 		<view class="container">
@@ -34,14 +37,14 @@
 				
 				<view class="card stat-card green-card">
 					<text class="stat-label">本周完成</text>
-					<text class="stat-value">3 次训练</text>
-					<text class="stat-desc">比上周多 1 次</text>
+					<text class="stat-value">{{trainingInfo.thisWeek}}</text>
+					<text class="stat-desc">{{trainingInfo.weeklyProgress}}</text>
 				</view>
 				
 				<view class="card stat-card purple-card">
 					<text class="stat-label">当前体重</text>
-					<text class="stat-value">75.5 kg</text>
-					<text class="stat-desc">比上周 -0.5 kg</text>
+					<text class="stat-value">{{weightInfo.current}}</text>
+					<text class="stat-desc">{{weightInfo.change}}</text>
 				</view>
 			</view>
 			
@@ -81,6 +84,14 @@ export default {
 			userInfo: {
 				name: '用户'
 			},
+			weightInfo: {
+				current: '暂无记录',
+				change: '暂无变化数据'
+			},
+			trainingInfo: {
+				thisWeek: '0 次训练',
+				weeklyProgress: '开始您的健身之旅'
+			},
 			recommendedPlans: [
 				{
 					id: 1,
@@ -112,6 +123,12 @@ export default {
 		if (userInfoStorage) {
 			this.userInfo = userInfoStorage;
 		}
+		
+		// 加载体重信息
+		this.loadWeightInfo();
+		
+		// 加载训练信息
+		this.loadTrainingInfo();
 	},
 	onMounted() {
 		// TabBar补丁 - 确保useShowTabBar不会报错
@@ -129,9 +146,8 @@ export default {
 			});
 		},
 		recordWorkout() {
-			uni.showToast({
-				title: '功能开发中',
-				icon: 'none'
+			uni.navigateTo({
+				url: '/pages/record/record'
 			});
 		},
 		goToPlans() {
@@ -144,6 +160,101 @@ export default {
 				title: '查看计划：' + plan.title,
 				icon: 'none'
 			});
+		},
+		loadWeightInfo() {
+			const weightHistory = uni.getStorageSync('weightHistory') || [];
+			
+			if (weightHistory.length === 0) {
+				this.weightInfo = {
+					current: '暂无记录',
+					change: '点击"进度追踪"记录体重'
+				};
+				return;
+			}
+			
+			// 获取最新体重
+			const latestWeight = weightHistory[0];
+			this.weightInfo.current = latestWeight.weight + ' kg';
+			
+			// 计算与上次记录的变化
+			if (weightHistory.length >= 2) {
+				const previousWeight = weightHistory[1];
+				const change = latestWeight.weight - previousWeight.weight;
+				const daysDiff = this.calculateDaysDiff(previousWeight.date, latestWeight.date);
+				
+				let changeText = '';
+				if (change > 0) {
+					changeText = `比${daysDiff}天前 +${change.toFixed(1)} kg`;
+				} else if (change < 0) {
+					changeText = `比${daysDiff}天前 ${change.toFixed(1)} kg`;
+				} else {
+					changeText = `比${daysDiff}天前无变化`;
+				}
+				
+				this.weightInfo.change = changeText;
+			} else {
+				// 计算距离记录日期的天数
+				const daysSinceRecord = this.calculateDaysDiff(latestWeight.date, new Date().toISOString().split('T')[0]);
+				if (daysSinceRecord === 0) {
+					this.weightInfo.change = '今日已记录';
+				} else {
+					this.weightInfo.change = `${daysSinceRecord}天前记录`;
+				}
+			}
+		},
+		calculateDaysDiff(date1, date2) {
+			const d1 = new Date(date1);
+			const d2 = new Date(date2);
+			const diffTime = Math.abs(d2 - d1);
+			const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+			return diffDays;
+		},
+		loadTrainingInfo() {
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			
+			if (workoutHistory.length === 0) {
+				this.trainingInfo = {
+					thisWeek: '0 次训练',
+					weeklyProgress: '开始您的健身之旅'
+				};
+				return;
+			}
+			
+			// 计算本周训练次数
+			const now = new Date();
+			const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+			const lastWeekStart = new Date(thisWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+			
+			let thisWeekCount = 0;
+			let lastWeekCount = 0;
+			
+			workoutHistory.forEach(workout => {
+				const workoutDate = new Date(workout.date);
+				
+				if (workoutDate >= thisWeekStart) {
+					thisWeekCount++;
+				} else if (workoutDate >= lastWeekStart && workoutDate < thisWeekStart) {
+					lastWeekCount++;
+				}
+			});
+			
+			this.trainingInfo.thisWeek = thisWeekCount + ' 次训练';
+			
+			// 计算进度变化
+			if (lastWeekCount === 0 && thisWeekCount > 0) {
+				this.trainingInfo.weeklyProgress = '本周开始健身，加油！';
+			} else if (lastWeekCount === 0) {
+				this.trainingInfo.weeklyProgress = '本周尚未开始训练';
+			} else {
+				const change = thisWeekCount - lastWeekCount;
+				if (change > 0) {
+					this.trainingInfo.weeklyProgress = `比上周多 ${change} 次`;
+				} else if (change < 0) {
+					this.trainingInfo.weeklyProgress = `比上周少 ${Math.abs(change)} 次`;
+				} else {
+					this.trainingInfo.weeklyProgress = '与上周持平';
+				}
+			}
 		}
 	}
 }
@@ -193,6 +304,12 @@ export default {
 	border-bottom: 4rpx solid #3b82f6;
 	color: #3b82f6;
 	font-weight: 500;
+}
+
+.nav-actions {
+	display: flex;
+	align-items: center;
+	min-width: 120rpx; /* 确保右侧有足够的占位空间 */
 }
 
 .container {
