@@ -1,0 +1,6 @@
+{
+  "name": "user-auth",
+  "dependencies": {
+    "uniCloud": "latest"
+  }
+}

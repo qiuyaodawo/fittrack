@@ -29,26 +29,36 @@
 				
 				<button class="btn btn-primary" form-type="submit">登录</button>
 			</form>
-			
-			<view class="register-link">
+					<view class="register-link">
 				<text>还没有账户? </text>
 				<text class="text-primary" @tap="goToRegister">立即注册</text>
+			</view>
+			
+			<!-- 认证模式切换 -->
+			<view class="auth-mode-switch">
+				<text class="switch-label">认证模式：</text>
+				<text class="switch-mode" @tap="toggleAuthMode">
+					{{ useCloudAuth ? '云端登录' : '本地登录' }}
+				</text>
 			</view>
 		</view>
 	</view>
 </template>
 
 <script>
+import cloudDataService from '@/utils/cloudDataService.js';
+
 export default {
 	data() {
 		return {
 			email: '',
 			password: '',
-			rememberMe: false
+			rememberMe: false,
+			useCloudAuth: true // 是否使用云端认证
 		}
 	},
 	methods: {
-		handleLogin() {
+		async handleLogin() {
 			// 验证表单
 			if (!this.email || !this.password) {
 				uni.showToast({
@@ -58,30 +68,80 @@ export default {
 				return;
 			}
 			
-			// 模拟登录API调用
 			uni.showLoading({
 				title: '登录中...'
 			});
 			
-			setTimeout(() => {
+			try {
+				if (this.useCloudAuth) {
+					// 使用云端认证
+					const result = await cloudDataService.login(this.email, this.password);
+					
+					uni.hideLoading();
+					
+					if (result.success) {
+						// 登录成功后自动同步数据
+						uni.showLoading({
+							title: '同步数据中...'
+						});
+						
+						await cloudDataService.getAllDataFromCloud();
+						
+						uni.hideLoading();
+						
+						uni.showToast({
+							title: '登录成功',
+							icon: 'success'
+						});
+						
+						// 跳转到主页
+						setTimeout(() => {
+							uni.switchTab({
+								url: '/pages/index/index'
+							});
+						}, 1000);
+					} else {
+						uni.showToast({
+							title: result.message,
+							icon: 'none'
+						});
+					}
+				} else {
+					// 使用本地模拟登录
+					setTimeout(() => {
+						uni.hideLoading();
+						// 保存登录状态
+						uni.setStorageSync('token', 'demo_token');
+						uni.setStorageSync('userInfo', {
+							id: 1,
+							email: this.email,
+							name: '用户'
+						});
+						
+						// 跳转到主页
+						uni.switchTab({
+							url: '/pages/index/index'
+						});
+					}, 1500);
+				}
+			} catch (error) {
 				uni.hideLoading();
-				// 保存登录状态
-				uni.setStorageSync('token', 'demo_token');
-				uni.setStorageSync('userInfo', {
-					id: 1,
-					email: this.email,
-					name: '用户'
+				uni.showToast({
+					title: '登录失败，请稍后重试',
+					icon: 'none'
 				});
-				
-				// 跳转到主页
-				uni.switchTab({
-					url: '/pages/index/index'
-				});
-			}, 1500);
+			}
 		},
 		goToRegister() {
 			uni.navigateTo({
 				url: '/pages/register/register'
+			});
+		},
+		toggleAuthMode() {
+			this.useCloudAuth = !this.useCloudAuth;
+			uni.showToast({
+				title: this.useCloudAuth ? '已切换到云端登录' : '已切换到本地登录',
+				icon: 'none'
 			});
 		}
 	}
@@ -152,6 +212,25 @@ export default {
 	margin-top: 30rpx;
 	text-align: center;
 	font-size: 26rpx;
+}
+
+.auth-mode-switch {
+	text-align: center;
+	margin-top: 30rpx;
+	padding-top: 30rpx;
+	border-top: 1px solid var(--border-color);
+}
+
+.switch-label {
+	font-size: 26rpx;
+	color: var(--text-color-light);
+}
+
+.switch-mode {
+	font-size: 26rpx;
+	color: var(--primary-color);
+	margin-left: 10rpx;
+	text-decoration: underline;
 }
 
 .btn {

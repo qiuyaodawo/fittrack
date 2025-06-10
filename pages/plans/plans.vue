@@ -1,6 +1,5 @@
 <template>
-	<view class="page-container">
-		<!-- 顶部导航 -->
+	<view class="page-container">		<!-- 顶部导航 -->
 		<view class="top-nav">
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
@@ -10,7 +9,10 @@
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
 			<view class="nav-actions">
-				<!-- 右侧占位符，保持布局平衡 -->
+				<view class="sync-status" @tap="syncData">
+					<text class="sync-icon" :class="syncStatus.icon">⚡</text>
+					<text class="sync-text">{{ syncStatus.text }}</text>
+				</view>
 			</view>
 		</view>
 		
@@ -361,6 +363,8 @@
 </template>
 
 <script>
+import cloudDataService from '@/utils/cloudDataService.js';
+
 export default {
 	data() {
 		return {
@@ -425,12 +429,18 @@ export default {
 				rest: '60-90秒',
 				notes: ''
 			},
-			
-			// 自定义选择器显示状态
+					// 自定义选择器显示状态
 			showGoalOptions: false,
 			showDaysOptions: false,
 			showLevelOptions: false,
 			showDurationOptions: false,
+			
+			// 云同步状态
+			syncStatus: {
+				icon: 'sync-connected',
+				text: '已连接',
+				syncing: false
+			},
 			
 			// 可选择的动作库
 			exerciseLibrary: {
@@ -473,10 +483,11 @@ export default {
 				}
 			]
 		}
-	},
-	onShow() {
+	},	onShow() {
 		// 页面显示时加载我的计划
 		this.loadMyPlans();
+		// 更新同步状态
+		this.updateSyncStatus();
 	},
 	methods: {
 		navigateTo(page) {
@@ -816,9 +827,8 @@ export default {
 				icon: 'success'
 			});
 		},
-		
-		// 保存自定义计划
-		saveCustomPlan() {
+				// 保存自定义计划
+		async saveCustomPlan() {
 			if (!this.customPlan.title.trim()) {
 				uni.showToast({
 					title: '请输入计划名称',
@@ -844,22 +854,42 @@ export default {
 				totalWeeks: this.customPlan.weeks
 			};
 			
-			// 保存到本地存储
-			const savedPlans = uni.getStorageSync('myPlans') || [];
-			savedPlans.unshift(planData);
-			uni.setStorageSync('myPlans', savedPlans);
-			
-			// 更新显示的计划列表
-			this.loadMyPlans();
-			
-			// 关闭弹窗
-			this.closeModal();
-			
-			uni.showToast({
-				title: '计划创建成功',
-				icon: 'success',
-				duration: 2000
-			});
+			try {
+				// 保存到本地存储
+				const savedPlans = uni.getStorageSync('myPlans') || [];
+				savedPlans.unshift(planData);
+				uni.setStorageSync('myPlans', savedPlans);
+				
+				// 尝试同步到云端
+				const userInfo = uni.getStorageSync('userInfo');
+				if (userInfo && userInfo.userId) {
+					try {
+						await cloudDataService.savePlanToCloud(planData);
+						console.log('计划已同步至云端');
+					} catch (error) {
+						console.error('云端同步失败:', error);
+						// 云端同步失败不影响本地保存
+					}
+				}
+				
+				// 更新显示的计划列表
+				this.loadMyPlans();
+				
+				// 关闭弹窗
+				this.closeModal();
+				
+				uni.showToast({
+					title: '计划创建成功',
+					icon: 'success',
+					duration: 2000
+				});
+			} catch (error) {
+				console.error('保存计划失败:', error);
+				uni.showToast({
+					title: '保存失败，请重试',
+					icon: 'none'
+				});
+			}
 		},
 		onNewPlanGoalChange(e) {
 			console.log('目标改变:', e.detail.value);
@@ -1599,8 +1629,7 @@ export default {
 			}
 			
 			return plan;
-		},
-		savePlan() {
+		},		async savePlan() {
 			if (!this.previewPlan || this.previewPlan.length === 0) {
 				uni.showToast({
 					title: '请先生成计划',
@@ -1633,23 +1662,43 @@ export default {
 				exercises: [...this.previewPlan]
 			};
 			
-			// 保存到本地存储
-			const savedPlans = uni.getStorageSync('myPlans') || [];
-			savedPlans.unshift(newPlan);
-			uni.setStorageSync('myPlans', savedPlans);
-			
-			// 更新显示的计划列表
-			this.loadMyPlans();
-			
-			// 重置预览状态
-			this.showPreview = false;
-			this.previewPlan = [];
-			
-			uni.showToast({
-				title: '计划已保存到我的计划',
-				icon: 'success',
-				duration: 2000
-			});
+			try {
+				// 保存到本地存储
+				const savedPlans = uni.getStorageSync('myPlans') || [];
+				savedPlans.unshift(newPlan);
+				uni.setStorageSync('myPlans', savedPlans);
+				
+				// 尝试同步到云端
+				const userInfo = uni.getStorageSync('userInfo');
+				if (userInfo && userInfo.userId) {
+					try {
+						await cloudDataService.savePlanToCloud(newPlan);
+						console.log('计划已同步至云端');
+					} catch (error) {
+						console.error('云端同步失败:', error);
+						// 云端同步失败不影响本地保存
+					}
+				}
+				
+				// 更新显示的计划列表
+				this.loadMyPlans();
+				
+				// 重置预览状态
+				this.showPreview = false;
+				this.previewPlan = [];
+				
+				uni.showToast({
+					title: '计划已保存到我的计划',
+					icon: 'success',
+					duration: 2000
+				});
+			} catch (error) {
+				console.error('保存计划失败:', error);
+				uni.showToast({
+					title: '保存失败，请重试',
+					icon: 'none'
+				});
+			}
 		},
 		viewPlanDetails(plan) {
 			// 显示计划详情
@@ -1741,8 +1790,7 @@ export default {
 				this.myPlans = savedPlans;
 			}
 		},
-		
-		// 删除计划
+				// 删除计划
 		deletePlan(plan, index) {
 			uni.showModal({
 				title: '确认删除',
@@ -1763,6 +1811,117 @@ export default {
 						});
 					}
 				}
+			});
+		},
+		
+		// 云同步相关方法
+		async syncData() {
+			if (this.syncStatus.syncing) {
+				return;
+			}
+			
+			this.syncStatus.syncing = true;
+			this.syncStatus.icon = 'sync-syncing';
+			this.syncStatus.text = '同步中...';
+			
+			try {
+				// 检查用户登录状态
+				const userInfo = uni.getStorageSync('userInfo');
+				if (!userInfo || !userInfo.userId) {
+					uni.showModal({
+						title: '需要登录',
+						content: '云同步功能需要登录账户，是否前往登录？',
+						success: (res) => {
+							if (res.confirm) {
+								uni.reLaunch({
+									url: '/pages/login/login'
+								});
+							}
+						}
+					});
+					this.updateSyncStatus();
+					return;
+				}
+				
+				// 获取本地数据
+				const localPlans = uni.getStorageSync('myPlans') || [];
+				
+				// 上传到云端
+				if (localPlans.length > 0) {
+					await cloudDataService.syncPlansToCloud(localPlans);
+				}
+				
+				// 从云端获取数据
+				const cloudPlans = await cloudDataService.getPlansFromCloud();
+				
+				// 合并数据
+				const mergedPlans = this.mergePlansData(localPlans, cloudPlans);
+				
+				// 保存合并后的数据
+				uni.setStorageSync('myPlans', mergedPlans);
+				this.myPlans = mergedPlans;
+				
+				this.syncStatus.icon = 'sync-connected';
+				this.syncStatus.text = '同步完成';
+				
+				uni.showToast({
+					title: '数据同步成功',
+					icon: 'success'
+				});
+				
+				// 3秒后恢复正常状态
+				setTimeout(() => {
+					this.updateSyncStatus();
+				}, 3000);
+				
+			} catch (error) {
+				console.error('数据同步失败:', error);
+				this.syncStatus.icon = 'sync-error';
+				this.syncStatus.text = '同步失败';
+				
+				uni.showToast({
+					title: '同步失败，请稍后重试',
+					icon: 'none'
+				});
+				
+				// 3秒后恢复状态
+				setTimeout(() => {
+					this.updateSyncStatus();
+				}, 3000);
+			} finally {
+				this.syncStatus.syncing = false;
+			}
+		},
+		
+		// 更新同步状态
+		updateSyncStatus() {
+			const userInfo = uni.getStorageSync('userInfo');
+			if (userInfo && userInfo.userId) {
+				this.syncStatus.icon = 'sync-connected';
+				this.syncStatus.text = '已连接';
+			} else {
+				this.syncStatus.icon = 'sync-disconnected';
+				this.syncStatus.text = '未登录';
+			}
+		},
+		
+		// 合并计划数据
+		mergePlansData(localPlans, cloudPlans) {
+			const merged = [...localPlans];
+			const localIds = new Set(localPlans.map(plan => plan.id));
+			
+			// 添加云端独有的数据
+			cloudPlans.forEach(cloudPlan => {
+				if (!localIds.has(cloudPlan.id)) {
+					merged.push(cloudPlan);
+				}
+			});
+			
+			// 按创建时间排序
+			return merged.sort((a, b) => {
+				const timeA = new Date(a.createdDate || 0).getTime();
+				const timeB = new Date(b.createdDate || 0).getTime();
+				return timeB - timeA;
 			});
 		}
 	}
@@ -2861,4 +3020,54 @@ export default {
 	font-size: 20rpx;
 	color: #999;
 }
-</style> 
+
+/* 同步状态样式 */
+.sync-status {
+	display: flex;
+	align-items: center;
+	gap: 8rpx;
+	padding: 8rpx 16rpx;
+	background-color: rgba(255, 255, 255, 0.1);
+	border-radius: 20rpx;
+	transition: all 0.3s ease;
+	cursor: pointer;
+}
+
+.sync-status:hover {
+	background-color: rgba(255, 255, 255, 0.2);
+	transform: translateY(-2rpx);
+}
+
+.sync-icon {
+	font-size: 24rpx;
+	transition: all 0.3s ease;
+}
+
+.sync-icon.sync-connected {
+	color: #2ecc71;
+}
+
+.sync-icon.sync-disconnected {
+	color: #95a5a6;
+}
+
+.sync-icon.sync-syncing {
+	color: #f39c12;
+	animation: spin 1s linear infinite;
+}
+
+.sync-icon.sync-error {
+	color: #e74c3c;
+}
+
+.sync-text {
+	font-size: 24rpx;
+	color: #333;
+	font-weight: 500;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+</style>

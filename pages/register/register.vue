@@ -5,9 +5,9 @@
 				<text class="app-title">FitTrack</text>
 				<text class="app-subtitle">创建您的账户</text>
 			</view>
-			
-			<form @submit="handleRegister">
+					<form @submit="handleRegister">
 				<view class="form-group">
+					<input type="text" class="input" v-model="name" placeholder="用户名" />
 					<input type="text" class="input" v-model="email" placeholder="邮箱地址" />
 					<view class="password-input-container">
 						<input 
@@ -34,29 +34,40 @@
 				
 				<button class="btn btn-primary" form-type="submit">注册</button>
 			</form>
-			
-			<view class="login-link">
+					<view class="login-link">
 				<text>已有账户? </text>
 				<text class="text-primary" @tap="goToLogin">立即登录</text>
+			</view>
+			
+			<!-- 认证模式切换 -->
+			<view class="auth-mode-switch">
+				<text class="switch-label">注册模式：</text>
+				<text class="switch-mode" @tap="toggleAuthMode">
+					{{ useCloudAuth ? '云端注册' : '本地注册' }}
+				</text>
 			</view>
 		</view>
 	</view>
 </template>
 
 <script>
+import cloudDataService from '@/utils/cloudDataService.js';
+
 export default {
 	data() {
 		return {
+			name: '',
 			email: '',
 			password: '',
 			confirmPassword: '',
-			agreeTerms: false
+			agreeTerms: false,
+			useCloudAuth: true // 是否使用云端注册
 		}
 	},
 	methods: {
-		handleRegister() {
+		async handleRegister() {
 			// 验证表单
-			if (!this.email || !this.password || !this.confirmPassword) {
+			if (!this.name || !this.email || !this.password || !this.confirmPassword) {
 				uni.showToast({
 					title: '请填写所有字段',
 					icon: 'none'
@@ -80,26 +91,65 @@ export default {
 				return;
 			}
 			
-			// 模拟注册API调用
 			uni.showLoading({
 				title: '注册中...'
 			});
 			
-			setTimeout(() => {
+			try {
+				if (this.useCloudAuth) {
+					// 使用云端注册
+					const result = await cloudDataService.register(this.email, this.password, this.name);
+					
+					uni.hideLoading();
+					
+					if (result.success) {
+						uni.showToast({
+							title: '注册成功',
+							icon: 'success'
+						});
+						
+						// 注册成功后返回登录页
+						setTimeout(() => {
+							this.goToLogin();
+						}, 1500);
+					} else {
+						uni.showToast({
+							title: result.message,
+							icon: 'none'
+						});
+					}
+				} else {
+					// 使用本地模拟注册
+					setTimeout(() => {
+						uni.hideLoading();
+						uni.showToast({
+							title: '注册成功',
+							icon: 'success'
+						});
+						
+						// 注册成功后返回登录页
+						setTimeout(() => {
+							this.goToLogin();
+						}, 1500);
+					}, 1500);
+				}
+			} catch (error) {
 				uni.hideLoading();
 				uni.showToast({
-					title: '注册成功',
-					icon: 'success'
+					title: '注册失败，请稍后重试',
+					icon: 'none'
 				});
-				
-				// 注册成功后返回登录页
-				setTimeout(() => {
-					this.goToLogin();
-				}, 1500);
-			}, 1500);
+			}
 		},
 		goToLogin() {
 			uni.navigateBack();
+		},
+		toggleAuthMode() {
+			this.useCloudAuth = !this.useCloudAuth;
+			uni.showToast({
+				title: this.useCloudAuth ? '已切换到云端注册' : '已切换到本地注册',
+				icon: 'none'
+			});
 		}
 	}
 }
@@ -169,6 +219,25 @@ export default {
 	margin-top: 30rpx;
 	text-align: center;
 	font-size: 26rpx;
+}
+
+.auth-mode-switch {
+	text-align: center;
+	margin-top: 30rpx;
+	padding-top: 30rpx;
+	border-top: 1px solid var(--border-color);
+}
+
+.switch-label {
+	font-size: 26rpx;
+	color: var(--text-color-light);
+}
+
+.switch-mode {
+	font-size: 26rpx;
+	color: var(--primary-color);
+	margin-left: 10rpx;
+	text-decoration: underline;
 }
 
 .btn {

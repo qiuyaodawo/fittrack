@@ -147,6 +147,8 @@
 </template>
 
 <script>
+import cloudDataService from '@/utils/cloudDataService.js';
+
 export default {
 	data() {
 		return {
@@ -584,9 +586,8 @@ export default {
 				}
 			});
 		},
-		
-		// 保存训练
-		saveWorkout() {
+				// 保存训练
+		async saveWorkout() {
 			// 验证表单
 			if (!this.workoutInfo.name) {
 				uni.showToast({
@@ -622,37 +623,66 @@ export default {
 				return;
 			}
 			
-			// 构造训练记录数据
-			const workoutData = {
-				id: Date.now(),
-				name: this.workoutInfo.name,
-				type: this.workoutTypes[this.workoutTypeIndex],
-				date: this.workoutInfo.date,
-				exercises: this.selectedExercises,
-				status: '已完成',
-				duration: this.calculateDuration()
-			};
-			
-			// 保存到本地存储
-			let workoutHistory = uni.getStorageSync('workoutHistory') || [];
-			workoutHistory.unshift(workoutData);
-			uni.setStorageSync('workoutHistory', workoutHistory);
-			
-			// 检查并更新个人记录
-			this.checkForNewRecords(workoutData);
-			
-			uni.showToast({
-				title: '训练记录保存成功',
-				icon: 'success',
-				duration: 2000
+			// 显示保存中状态
+			uni.showLoading({
+				title: '保存中...'
 			});
 			
-			// 2秒后返回首页
-			setTimeout(() => {
-				uni.reLaunch({
-					url: '/pages/index/index'
+			try {
+				// 构造训练记录数据
+				const workoutData = {
+					id: Date.now(),
+					name: this.workoutInfo.name,
+					type: this.workoutTypes[this.workoutTypeIndex],
+					date: this.workoutInfo.date,
+					exercises: this.selectedExercises,
+					status: '已完成',
+					duration: this.calculateDuration()
+				};
+				
+				// 保存到本地存储
+				let workoutHistory = uni.getStorageSync('workoutHistory') || [];
+				workoutHistory.unshift(workoutData);
+				uni.setStorageSync('workoutHistory', workoutHistory);
+				
+				// 检查并更新个人记录
+				this.checkForNewRecords(workoutData);
+				
+				// 尝试云同步
+				const currentUser = uni.getStorageSync('currentUser');
+				if (currentUser && currentUser.useCloudAuth) {
+					try {
+						await cloudDataService.syncWorkoutHistory();
+						console.log('训练记录云同步成功');
+					} catch (syncError) {
+						console.error('云同步失败，但数据已保存到本地:', syncError);
+						// 云同步失败不影响本地保存
+					}
+				}
+				
+				uni.hideLoading();
+				uni.showToast({
+					title: '训练记录保存成功',
+					icon: 'success',
+					duration: 2000
 				});
-			}, 2000);
+				
+				// 2秒后返回首页
+				setTimeout(() => {
+					uni.reLaunch({
+						url: '/pages/index/index'
+					});
+				}, 2000);
+				
+			} catch (error) {
+				uni.hideLoading();
+				console.error('保存训练记录失败:', error);
+				uni.showToast({
+					title: '保存失败：' + (error.message || '未知错误'),
+					icon: 'none',
+					duration: 3000
+				});
+			}
 		},
 		
 		// 计算训练时长
