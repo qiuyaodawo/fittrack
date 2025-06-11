@@ -1,6 +1,0 @@
-{
-  "name": "data-sync",
-  "dependencies": {
-    "uniCloud": "latest"
-  }
-}

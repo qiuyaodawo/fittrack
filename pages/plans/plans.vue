@@ -1,5 +1,6 @@
 <template>
-	<view class="page-container">		<!-- 顶部导航 -->
+	<view class="page-container">
+		<!-- 顶部导航 -->
 		<view class="top-nav">
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
@@ -10,7 +11,7 @@
 			</view>
 			<view class="nav-actions">
 				<view class="sync-status" @tap="syncData">
-					<text class="sync-icon" :class="syncStatus.icon">⚡</text>
+					<text class="sync-icon">⚡</text>
 					<text class="sync-text">{{ syncStatus.text }}</text>
 				</view>
 			</view>
@@ -161,7 +162,7 @@
 					<!-- 计划基本信息 -->
 					<view class="form-group">
 						<text class="form-label">计划名称</text>
-						<input v-model="customPlan.title" placeholder="请输入计划名称" class="form-input" :value="customPlan.title" @input="handleTitleInput" />
+						<input v-model="customPlan.title" placeholder="请输入计划名称" class="form-input" />
 					</view>
 					
 					<!-- 周数控制 -->
@@ -200,7 +201,7 @@
 								v-for="(day, index) in weekDays" 
 								:key="index"
 								@tap="editDay(day, customPlan.currentWeek)"
-								:class="{'has-plan': getDayPlan(customPlan.currentWeek, day), 'rest-day': getDayPlan(customPlan.currentWeek, day)?.restDay}">
+								:class="{'has-plan': getDayPlan(customPlan.currentWeek, day), 'rest-day': getDayPlan(customPlan.currentWeek, day) && getDayPlan(customPlan.currentWeek, day).restDay}">
 								
 								<text class="day-name">{{day}}</text>
 								<view class="day-status" v-if="getDayPlan(customPlan.currentWeek, day)">
@@ -1160,6 +1161,34 @@ export default {
 							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '哑铃侧平举 4组 x 12-15次', '后束飞鸟 3组 x 15次', '直立划船 3组 x 12次'] },
 							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] },
 							{ day: '周六', focus: '腿部 (后链)', exercises: ['罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '臀桥 3组 x 15-20次', '小腿提踵 4组 x 15-20次'] }
+						]
+					},
+					高级: {
+						3: [
+							{ day: '周一', focus: '推力主导', exercises: ['杠铃卧推 5组 x 6-8次', '肩推 4组 x 8次', '倾斜卧推 4组 x 8-10次', '三头肌训练 4组'] },
+							{ day: '周三', focus: '拉力主导', exercises: ['硬拉 4组 x 6次', '引体向上 4组 x 8次', '杠铃划船 4组 x 8次', '二头肌训练 4组'] },
+							{ day: '周五', focus: '下肢主导', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 3组 x 8次', '罗马尼亚硬拉 4组 x 8次', '腿部辅助训练 3组'] }
+						],
+						4: [
+							{ day: '周一', focus: '胸肌推力', exercises: ['杠铃卧推 5组 x 6-8次', '倾斜杠铃卧推 4组 x 8-10次', '双杠臂屈伸 4组 x 8-12次', '三头肌训练 3组'] },
+							{ day: '周二', focus: '背部拉力', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '二头肌训练 3组'] },
+							{ day: '周四', focus: '下肢力量', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '腿部辅助 3组'] },
+							{ day: '周六', focus: '肩部推力', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '侧平举 3组 x 12-15次'] }
+						],
+						5: [
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
+							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '保加利亚深蹲 3组 x 10-12次'] },
+							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
+							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] }
+						],
+						6: [
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
+							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '腿屈伸 3组 x 12-15次'] },
+							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
+							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] },
+							{ day: '周六', focus: '腿部 (后链)', exercises: ['杠铃硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '小腿提踵 4组 x 15-20次'] }
 						]
 					},
 					高级: {
@@ -2508,7 +2537,7 @@ export default {
 
 .day-card {
 	background: white;
-	border-radius: 16rpx;
+	border-radius: 12rpx;
 	padding: 24rpx;
 	border: 2rpx solid #e9ecef;
 	transition: all 0.3s;
@@ -2519,464 +2548,6 @@ export default {
 	border-color: var(--primary-color);
 	transform: translateY(-4rpx);
 	box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.1);
-}
-
-.day-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 16rpx;
-}
-
-.day-name {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #333;
-}
-
-.day-status {
-	font-size: 24rpx;
-	padding: 8rpx 12rpx;
-	border-radius: 12rpx;
-	background: var(--primary-color);
-	color: white;
-}
-
-.day-status.empty {
-	background: #f8f9fa;
-	color: #666;
-}
-
-.day-preview {
-	margin-top: 16rpx;
-}
-
-.exercise-preview {
-	display: block;
-	font-size: 24rpx;
-	color: #666;
-	margin-bottom: 8rpx;
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-}
-
-.more-exercises {
-	font-size: 22rpx;
-	color: #999;
-	font-style: italic;
-}
-
-/* 日编辑器样式 */
-.day-editor-modal {
-	width: 90%;
-	max-width: 800rpx;
-	max-height: 80vh;
-	overflow-y: auto;
-}
-
-.rest-day-option {
-	margin-bottom: 30rpx;
-	padding: 24rpx;
-	background: #f8f9fa;
-	border-radius: 12rpx;
-}
-
-.checkbox-label {
-	display: flex;
-	align-items: center;
-	gap: 16rpx;
-	font-size: 30rpx;
-	color: #333;
-}
-
-.exercises-section {
-	margin-bottom: 40rpx;
-}
-
-.section-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 20rpx;
-}
-
-.section-title {
-	font-size: 32rpx;
-	font-weight: 600;
-	color: #333;
-}
-
-.btn.btn-small {
-	padding: 12rpx 20rpx;
-	font-size: 24rpx;
-	height: auto;
-}
-
-.exercise-list .exercise-item {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 24rpx;
-	background: white;
-	border-radius: 12rpx;
-	border: 2rpx solid #e9ecef;
-	margin-bottom: 16rpx;
-}
-
-.exercise-info {
-	flex: 1;
-}
-
-.exercise-name {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #333;
-	margin-bottom: 8rpx;
-	display: block;
-}
-
-.exercise-details {
-	font-size: 24rpx;
-	color: #666;
-	margin-right: 16rpx;
-}
-
-.exercise-weight {
-	font-size: 24rpx;
-	color: var(--primary-color);
-	font-weight: 500;
-}
-
-.exercise-actions {
-	display: flex;
-	gap: 12rpx;
-}
-
-.btn.btn-danger {
-	background: #dc3545;
-	color: white;
-}
-
-.empty-state {
-	text-align: center;
-	padding: 60rpx 20rpx;
-	color: #999;
-	font-size: 28rpx;
-}
-
-.notes-section {
-	margin-top: 30rpx;
-}
-
-.notes-input {
-	width: 100%;
-	min-height: 120rpx;
-	padding: 20rpx;
-	border: 2rpx solid #e9ecef;
-	border-radius: 12rpx;
-	font-size: 28rpx;
-	margin-top: 16rpx;
-	resize: none;
-}
-
-/* 动作选择器样式 */
-.exercise-selector-modal {
-	width: 90%;
-	max-width: 900rpx;
-	max-height: 80vh;
-	overflow-y: auto;
-}
-
-.exercise-categories {
-	margin-bottom: 30rpx;
-}
-
-.category {
-	margin-bottom: 30rpx;
-}
-
-.category-name {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #333;
-	margin-bottom: 16rpx;
-	display: block;
-}
-
-.exercise-options {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12rpx;
-}
-
-.exercise-option {
-	padding: 16rpx 24rpx;
-	background: #f8f9fa;
-	border-radius: 20rpx;
-	font-size: 26rpx;
-	color: #666;
-	border: 2rpx solid transparent;
-	transition: all 0.3s;
-}
-
-.exercise-option.selected {
-	background: var(--primary-color);
-	color: white;
-	border-color: var(--primary-color);
-}
-
-.form-group {
-	margin-bottom: 30rpx;
-}
-
-.form-group .form-label {
-	font-size: 28rpx;
-	font-weight: 500;
-	color: #333;
-	margin-bottom: 12rpx;
-	display: block;
-}
-
-.form-input, .form-textarea {
-	width: 100%;
-	padding: 20rpx;
-	border: 2rpx solid #e9ecef;
-	border-radius: 12rpx;
-	font-size: 28rpx;
-	background: white;
-	box-sizing: border-box;
-	min-height: 80rpx;
-}
-
-.form-textarea {
-	min-height: 120rpx;
-	resize: none;
-}
-
-.close-btn {
-	font-size: 40rpx;
-	color: rgba(255, 255, 255, 0.8);
-	cursor: pointer;
-	width: 60rpx;
-	height: 60rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.1);
-	transition: all 0.3s;
-}
-
-.close-btn:hover {
-	background: rgba(255, 255, 255, 0.2);
-	color: white;
-}
-
-.btn.btn-outline {
-	background: transparent;
-	color: var(--primary-color);
-	border: 2rpx solid var(--primary-color);
-}
-
-/* 预览编辑功能样式 */
-.preview-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 30rpx;
-	border-bottom: 2rpx solid var(--border-color);
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	color: white;
-}
-
-.preview-content {
-	padding: 30rpx;
-	max-height: 500rpx;
-	overflow-y: auto;
-}
-
-/* 交互式动作列表样式 */
-.exercise-list-interactive {
-	margin-left: 20rpx;
-	margin-top: 16rpx;
-}
-
-.exercise-item-interactive {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 12rpx 16rpx;
-	margin-bottom: 8rpx;
-	background: #f8f9fa;
-	border-radius: 8rpx;
-	border: 2rpx solid transparent;
-	transition: all 0.3s;
-	cursor: pointer;
-	position: relative;
-}
-
-.exercise-item-interactive:hover {
-	background: #e9ecef;
-	border-color: var(--primary-color);
-	transform: translateX(4rpx);
-}
-
-.exercise-item-interactive .exercise-text {
-	flex: 1;
-	font-size: 26rpx;
-	color: #333;
-}
-
-.edit-hint {
-	opacity: 0;
-	transition: opacity 0.3s;
-	font-size: 20rpx;
-	color: #999;
-}
-
-.exercise-item-interactive:hover .edit-hint {
-	opacity: 1;
-}
-
-.add-exercise-btn-mini {
-	width: 48rpx;
-	height: 48rpx;
-	background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-	border: none;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin: 16rpx auto 0;
-	box-shadow: 0 4rpx 12rpx rgba(132, 250, 176, 0.3);
-	transition: all 0.3s;
-}
-
-.add-exercise-btn-mini:hover {
-	transform: scale(1.1);
-	box-shadow: 0 6rpx 16rpx rgba(132, 250, 176, 0.4);
-}
-
-.plus-icon {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: white;
-}
-
-.add-exercise-btn-mini {
-	background: white !important;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1) !important;
-}
-
-.add-exercise-btn-mini .plus-icon {
-	color: #667eea !important;
-}
-
-/* 动作编辑弹窗样式 */
-.exercise-edit-modal {
-	width: 600rpx;
-	max-width: 90vw;
-}
-
-.action-buttons {
-	margin-top: 30rpx;
-	text-align: center;
-}
-
-.btn.btn-danger {
-	background: #dc3545;
-	color: white;
-	border: 2rpx solid #dc3545;
-	padding: 16rpx 32rpx;
-	border-radius: 8rpx;
-	font-size: 26rpx;
-}
-
-
-
-.preview-footer {
-	padding: 30rpx;
-	border-top: 2rpx solid var(--border-color);
-	background: #f8f9fa;
-}
-
-/* 简洁的创建计划界面样式 */
-.week-control {
-	margin-top: 20rpx;
-}
-
-.week-selector {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 20rpx;
-}
-
-.week-btn {
-	width: 60rpx;
-	height: 60rpx;
-	border-radius: 50%;
-	background: var(--primary-color);
-	color: white;
-	border: none;
-	font-size: 24rpx;
-	font-weight: 600;
-}
-
-.week-btn:disabled {
-	background: #ddd;
-	color: #999;
-}
-
-.week-display {
-	font-size: 32rpx;
-	font-weight: 600;
-	color: #333;
-	min-width: 100rpx;
-	text-align: center;
-}
-
-.week-tabs {
-	display: flex;
-	gap: 12rpx;
-	flex-wrap: wrap;
-	margin-top: 20rpx;
-}
-
-.week-tab {
-	padding: 16rpx 24rpx;
-	background: #f8f9fa;
-	border-radius: 12rpx;
-	border: 2rpx solid #e9ecef;
-	font-size: 26rpx;
-	transition: all 0.3s;
-}
-
-.week-tab.active {
-	background: var(--primary-color);
-	color: white;
-	border-color: var(--primary-color);
-}
-
-.days-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 20rpx;
-	margin-top: 20rpx;
-}
-
-.day-card {
-	background: white;
-	border-radius: 12rpx;
-	padding: 20rpx;
-	border: 2rpx solid #e9ecef;
-	transition: all 0.3s;
-}
-
-.day-card:hover {
-	border-color: var(--primary-color);
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 
 .day-card.has-plan {

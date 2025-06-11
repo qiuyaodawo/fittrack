@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import cloudDataService from '@/utils/cloudDataService.js';
+import localDataService from '@/utils/localDataService.js';
 
 export default {
 	data() {
@@ -61,7 +61,7 @@ export default {
 			password: '',
 			confirmPassword: '',
 			agreeTerms: false,
-			useCloudAuth: true // 是否使用云端注册
+			useCloudAuth: false // 改为默认使用本地服务器
 		}
 	},
 	methods: {
@@ -96,47 +96,31 @@ export default {
 			});
 			
 			try {
-				if (this.useCloudAuth) {
-					// 使用云端注册
-					const result = await cloudDataService.register(this.email, this.password, this.name);
+				// 使用本地服务器注册
+				const result = await localDataService.register(this.email, this.password, this.name);
+				
+				uni.hideLoading();
+				
+				if (result.success) {
+					uni.showToast({
+						title: '注册成功',
+						icon: 'success'
+					});
 					
-					uni.hideLoading();
-					
-					if (result.success) {
-						uni.showToast({
-							title: '注册成功',
-							icon: 'success'
-						});
-						
-						// 注册成功后返回登录页
-						setTimeout(() => {
-							this.goToLogin();
-						}, 1500);
-					} else {
-						uni.showToast({
-							title: result.message,
-							icon: 'none'
-						});
-					}
-				} else {
-					// 使用本地模拟注册
+					// 注册成功后返回登录页
 					setTimeout(() => {
-						uni.hideLoading();
-						uni.showToast({
-							title: '注册成功',
-							icon: 'success'
-						});
-						
-						// 注册成功后返回登录页
-						setTimeout(() => {
-							this.goToLogin();
-						}, 1500);
+						this.goToLogin();
 					}, 1500);
+				} else {
+					uni.showToast({
+						title: result.message,
+						icon: 'none'
+					});
 				}
 			} catch (error) {
 				uni.hideLoading();
 				uni.showToast({
-					title: '注册失败，请稍后重试',
+					title: '注册失败，请检查服务器是否启动',
 					icon: 'none'
 				});
 			}
@@ -147,7 +131,7 @@ export default {
 		toggleAuthMode() {
 			this.useCloudAuth = !this.useCloudAuth;
 			uni.showToast({
-				title: this.useCloudAuth ? '已切换到云端注册' : '已切换到本地注册',
+				title: this.useCloudAuth ? '已切换到云端注册（已禁用）' : '使用本地服务器注册',
 				icon: 'none'
 			});
 		}
@@ -244,4 +228,4 @@ export default {
 	height: 80rpx;
 	line-height: 80rpx;
 }
-</style> 
+</style>

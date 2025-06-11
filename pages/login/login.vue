@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import cloudDataService from '@/utils/cloudDataService.js';
+import localDataService from '@/utils/localDataService.js';
 
 export default {
 	data() {
@@ -54,7 +54,7 @@ export default {
 			email: '',
 			password: '',
 			rememberMe: false,
-			useCloudAuth: true // 是否使用云端认证
+			useCloudAuth: false // 改为默认使用本地服务器
 		}
 	},
 	methods: {
@@ -73,61 +73,42 @@ export default {
 			});
 			
 			try {
-				if (this.useCloudAuth) {
-					// 使用云端认证
-					const result = await cloudDataService.login(this.email, this.password);
+				// 使用本地服务器登录
+				const result = await localDataService.login(this.email, this.password);
+				
+				uni.hideLoading();
+				
+				if (result.success) {
+					// 登录成功后自动同步数据
+					uni.showLoading({
+						title: '同步数据中...'
+					});
+					
+					await localDataService.getAllDataFromCloud();
 					
 					uni.hideLoading();
 					
-					if (result.success) {
-						// 登录成功后自动同步数据
-						uni.showLoading({
-							title: '同步数据中...'
-						});
-						
-						await cloudDataService.getAllDataFromCloud();
-						
-						uni.hideLoading();
-						
-						uni.showToast({
-							title: '登录成功',
-							icon: 'success'
-						});
-						
-						// 跳转到主页
-						setTimeout(() => {
-							uni.switchTab({
-								url: '/pages/index/index'
-							});
-						}, 1000);
-					} else {
-						uni.showToast({
-							title: result.message,
-							icon: 'none'
-						});
-					}
-				} else {
-					// 使用本地模拟登录
+					uni.showToast({
+						title: '登录成功',
+						icon: 'success'
+					});
+					
+					// 跳转到主页
 					setTimeout(() => {
-						uni.hideLoading();
-						// 保存登录状态
-						uni.setStorageSync('token', 'demo_token');
-						uni.setStorageSync('userInfo', {
-							id: 1,
-							email: this.email,
-							name: '用户'
-						});
-						
-						// 跳转到主页
 						uni.switchTab({
 							url: '/pages/index/index'
 						});
-					}, 1500);
+					}, 1000);
+				} else {
+					uni.showToast({
+						title: result.message,
+						icon: 'none'
+					});
 				}
 			} catch (error) {
 				uni.hideLoading();
 				uni.showToast({
-					title: '登录失败，请稍后重试',
+					title: '登录失败，请检查服务器是否启动',
 					icon: 'none'
 				});
 			}
@@ -140,7 +121,7 @@ export default {
 		toggleAuthMode() {
 			this.useCloudAuth = !this.useCloudAuth;
 			uni.showToast({
-				title: this.useCloudAuth ? '已切换到云端登录' : '已切换到本地登录',
+				title: this.useCloudAuth ? '已切换到云端登录（已禁用）' : '使用本地服务器登录',
 				icon: 'none'
 			});
 		}
@@ -237,4 +218,4 @@ export default {
 	height: 80rpx;
 	line-height: 80rpx;
 }
-</style> 
+</style>

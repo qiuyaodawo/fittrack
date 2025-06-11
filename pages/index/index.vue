@@ -83,7 +83,7 @@
 </template>
 
 <script>
-import cloudDataService from '@/utils/cloudDataService.js';
+import localDataService from '@/utils/localDataService.js';
 
 export default {
 	data() {
@@ -154,15 +154,15 @@ export default {
 			}
 		}
 	},
-	methods: {		// ...existing code...
+	methods: {
 		// 处理数据同步
 		async handleSync() {
 			if (this.syncStatus.syncing) return;
 			
-			if (!cloudDataService.isLoggedIn) {
+			if (!localDataService.isLoggedIn) {
 				uni.showModal({
 					title: '提示',
-					content: '需要登录云端账号才能同步数据，是否前往登录？',
+					content: '需要登录才能同步数据，是否前往登录？',
 					success: (res) => {
 						if (res.confirm) {
 							uni.navigateTo({
@@ -179,7 +179,7 @@ export default {
 			this.syncStatus.text = '同步中...';
 			
 			try {
-				const result = await cloudDataService.autoSync();
+				const result = await localDataService.autoSync();
 				
 				if (result.success) {
 					this.syncStatus.icon = '✅';
@@ -198,42 +198,37 @@ export default {
 					this.syncStatus.text = '同步失败';
 					
 					uni.showToast({
-						title: result.message || '同步失败',
+						title: result.message || '数据同步失败',
 						icon: 'none'
 					});
 				}
 			} catch (error) {
 				this.syncStatus.icon = '❌';
-				this.syncStatus.text = '同步失败';
+				this.syncStatus.text = '连接失败';
 				
 				uni.showToast({
-					title: '网络错误',
+					title: '请检查服务器是否启动',
 					icon: 'none'
 				});
 			}
 			
 			this.syncStatus.syncing = false;
 			
-			// 3秒后恢复初始状态
+			// 3秒后恢复默认状态
 			setTimeout(() => {
-				this.updateSyncStatus();
+				this.syncStatus.icon = '🔄';
+				this.syncStatus.text = '点击同步';
 			}, 3000);
 		},
 		
 		// 更新同步状态
 		updateSyncStatus() {
-			if (cloudDataService.isLoggedIn) {
-				this.syncStatus = {
-					icon: '☁️',
-					text: '云端已连接',
-					syncing: false
-				};
+			if (localDataService.isLoggedIn) {
+				this.syncStatus.icon = '🔄';
+				this.syncStatus.text = '点击同步';
 			} else {
-				this.syncStatus = {
-					icon: '📱',
-					text: '本地模式',
-					syncing: false
-				};
+				this.syncStatus.icon = '🔒';
+				this.syncStatus.text = '需要登录';
 			}
 		},
 		
@@ -645,4 +640,4 @@ export default {
 		font-size: 24rpx;
 	}
 }
-</style> 
+</style>

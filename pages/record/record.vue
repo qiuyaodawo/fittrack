@@ -148,6 +148,7 @@
 
 <script>
 import cloudDataService from '@/utils/cloudDataService.js';
+import localDataService from '@/utils/localDataService.js';
 
 export default {
 	data() {
@@ -648,15 +649,14 @@ export default {
 				// 检查并更新个人记录
 				this.checkForNewRecords(workoutData);
 				
-				// 尝试云同步
-				const currentUser = uni.getStorageSync('currentUser');
-				if (currentUser && currentUser.useCloudAuth) {
+				// 尝试同步到本地服务器
+				if (localDataService.isLoggedIn) {
 					try {
-						await cloudDataService.syncWorkoutHistory();
-						console.log('训练记录云同步成功');
+						await localDataService.syncWorkoutHistory();
+						console.log('训练记录已同步到本地服务器');
 					} catch (syncError) {
-						console.error('云同步失败，但数据已保存到本地:', syncError);
-						// 云同步失败不影响本地保存
+						console.error('本地服务器同步失败，但数据已保存到本地:', syncError);
+						// 同步失败不影响本地保存
 					}
 				}
 				
@@ -678,9 +678,8 @@ export default {
 				uni.hideLoading();
 				console.error('保存训练记录失败:', error);
 				uni.showToast({
-					title: '保存失败：' + (error.message || '未知错误'),
-					icon: 'none',
-					duration: 3000
+					title: '保存失败，请重试',
+					icon: 'none'
 				});
 			}
 		},
