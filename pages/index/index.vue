@@ -5,6 +5,7 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item active">首页</view>
+				<view class="nav-item" @tap="navigateTo('history')">记录</view>
 				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
@@ -58,21 +59,30 @@
 				<button class="btn btn-primary" @tap="recordWorkout">记录训练</button>
 			</view>
 			
-			<!-- 推荐训练计划 -->
-			<view class="card recommended-plans">
+			<!-- 本周训练计划 -->
+			<view class="card weekly-plans">
 				<view class="flex-row justify-between align-center">
-					<text class="section-title">推荐训练计划</text>
-					<text class="text-primary view-all" @tap="goToPlans">查看全部</text>
+					<text class="section-title">本周训练计划</text>
+					<text class="text-primary view-all" @tap="goToPlans">管理计划</text>
 				</view>
 				
-				<view class="plan-list">
-					<view class="plan-card" v-for="(plan, index) in recommendedPlans" :key="index" @tap="viewPlanDetails(plan)">
-						<view class="plan-card-content">
-							<text class="plan-title">{{plan.title}}</text>
-							<text class="plan-desc">{{plan.description}}</text>
-							<view class="flex-row justify-between align-center">
-								<view class="badge badge-primary">{{plan.level}}</view>
-								<text class="plan-duration">{{plan.duration}}</text>
+				<view class="weekly-plan-list">
+					<view class="day-plan-card" v-for="(day, index) in weeklyPlans" :key="index">
+						<view class="day-plan-header">
+							<text class="day-name" :class="{'today': day.isToday}">{{day.dayName}}</text>
+							<text class="day-date">{{day.date}}</text>
+						</view>
+						<view class="day-plan-content">
+							<view v-if="day.hasPlans" class="plan-info">
+								<text class="plan-title">{{day.planTitle}}</text>
+								<text class="plan-exercises">{{day.exerciseCount}}个动作</text>
+								<view class="plan-status" :class="day.statusClass">
+									<text class="status-text">{{day.status}}</text>
+								</view>
+							</view>
+							<view v-else class="no-plan">
+								<text class="no-plan-text">无计划</text>
+								<text class="add-plan-hint" @tap="goToPlans">+添加计划</text>
 							</view>
 						</view>
 					</view>
@@ -104,29 +114,7 @@ export default {
 				text: '点击同步',
 				syncing: false
 			},
-			recommendedPlans: [
-				{
-					id: 1,
-					title: '初学者全身训练',
-					description: '适合刚开始健身的人群，全面锻炼所有主要肌群。',
-					level: '初级',
-					duration: '45 分钟'
-				},
-				{
-					id: 2,
-					title: '增肌力量训练',
-					description: '专注于大重量复合动作，促进肌肉生长。',
-					level: '中级',
-					duration: '60 分钟'
-				},
-				{
-					id: 3,
-					title: '高强度间歇训练',
-					description: '燃烧脂肪，提高心肺功能的HIIT训练。',
-					level: '高级',
-					duration: '30 分钟'
-				}
-			]
+			weeklyPlans: []
 		}
 	},
 	onShow() {
@@ -144,6 +132,9 @@ export default {
 		
 		// 加载训练信息
 		this.loadTrainingInfo();
+		
+		// 加载本周计划
+		this.loadWeeklyPlans();
 	},
 	onMounted() {
 		// TabBar补丁 - 确保useShowTabBar不会报错
@@ -347,6 +338,104 @@ export default {
 					this.trainingInfo.weeklyProgress = '与上周持平';
 				}
 			}
+		},
+		loadWeeklyPlans() {
+			// 获取当前日期
+			const now = new Date();
+			const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+			
+			// 计算本周的开始日期（周一）
+			const currentDay = now.getDay();
+			const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+			const mondayDate = new Date(now.getTime() + mondayOffset * 24 * 60 * 60 * 1000);
+			
+			// 生成本周7天的计划数据
+			this.weeklyPlans = [];
+			
+			for (let i = 0; i < 7; i++) {
+				const date = new Date(mondayDate.getTime() + i * 24 * 60 * 60 * 1000);
+				const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1; // 转换为周一=0, 周日=6的索引
+				const dayName = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][dayIndex];
+				const dateStr = this.formatDate(date);
+				const isToday = this.isSameDay(date, now);
+				
+				// 从存储的计划中查找当日的训练安排
+				const dayPlan = this.getDayPlanFromStorage(dayName);
+				
+				const dayData = {
+					dayName: dayName,
+					date: dateStr,
+					isToday: isToday,
+					hasPlans: dayPlan !== null,
+					planTitle: dayPlan ? dayPlan.title : '',
+					exerciseCount: dayPlan ? dayPlan.exerciseCount : 0,
+					status: dayPlan ? dayPlan.status : '',
+					statusClass: dayPlan ? dayPlan.statusClass : ''
+				};
+				
+				this.weeklyPlans.push(dayData);
+			}
+		},
+		getDayPlanFromStorage(dayName) {
+			// 从本地存储获取用户的训练计划
+			const myPlans = uni.getStorageSync('myPlans') || [];
+			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			
+			// 找到进行中的计划
+			const activePlan = myPlans.find(plan => plan.status === '进行中');
+			
+			if (!activePlan || !activePlan.weekPlans) {
+				return null;
+			}
+			
+			// 查找当前周的计划
+			const currentWeek = this.getCurrentWeekOfPlan(activePlan);
+			const weekPlan = activePlan.weekPlans[currentWeek];
+			
+			if (!weekPlan || !weekPlan[dayName]) {
+				return null;
+			}
+			
+			const dayTraining = weekPlan[dayName];
+			
+			// 如果是休息日
+			if (dayTraining.restDay) {
+				return {
+					title: '休息日',
+					exerciseCount: 0,
+					status: '休息',
+					statusClass: 'rest'
+				};
+			}
+			
+			// 检查今日是否已完成训练
+			const today = new Date();
+			const todayStr = this.formatDate(today);
+			const isCompleted = workoutHistory.some(workout => 
+				workout.date === todayStr && workout.planDay === dayName
+			);
+			
+			return {
+				title: dayTraining.exercises.length > 0 ? `${dayTraining.exercises[0].name}等训练` : '训练日',
+				exerciseCount: dayTraining.exercises.length,
+				status: isCompleted ? '已完成' : '未完成',
+				statusClass: isCompleted ? 'completed' : 'pending'
+			};
+		},
+		getCurrentWeekOfPlan(plan) {
+			// 简化实现：返回第1周
+			// 实际应用中可以根据计划开始日期计算当前是第几周
+			return 1;
+		},
+		formatDate(date) {
+			const month = (date.getMonth() + 1).toString().padStart(2, '0');
+			const day = date.getDate().toString().padStart(2, '0');
+			return `${month}/${day}`;
+		},
+		isSameDay(date1, date2) {
+			return date1.getDate() === date2.getDate() &&
+				   date1.getMonth() === date2.getMonth() &&
+				   date1.getFullYear() === date2.getFullYear();
 		}
 	}
 }
@@ -614,6 +703,134 @@ export default {
 	align-items: center;
 }
 
+/* 本周训练计划样式 */
+.weekly-plans {
+	margin-bottom: 40rpx;
+}
+
+.weekly-plan-list {
+	margin-top: 30rpx;
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 16rpx;
+}
+
+.day-plan-card {
+	background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+	border: 2rpx solid #e2e8f0;
+	border-radius: 16rpx;
+	padding: 20rpx;
+	transition: all 0.3s ease;
+	min-height: 200rpx;
+	display: flex;
+	flex-direction: column;
+}
+
+.day-plan-card:hover {
+	transform: translateY(-4rpx);
+	box-shadow: 0 8rpx 25rpx rgba(0, 0, 0, 0.15);
+	border-color: #3b82f6;
+}
+
+.day-plan-header {
+	text-align: center;
+	margin-bottom: 16rpx;
+	border-bottom: 1rpx solid #e5e7eb;
+	padding-bottom: 12rpx;
+}
+
+.day-name {
+	font-size: 26rpx;
+	font-weight: 600;
+	color: #374151;
+	display: block;
+	margin-bottom: 6rpx;
+}
+
+.day-name.today {
+	color: #3b82f6;
+	font-weight: 700;
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+.day-date {
+	font-size: 22rpx;
+	color: #6b7280;
+}
+
+.day-plan-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.plan-info {
+	text-align: center;
+}
+
+.plan-info .plan-title {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #374151;
+	margin-bottom: 8rpx;
+	display: block;
+}
+
+.plan-exercises {
+	font-size: 20rpx;
+	color: #6b7280;
+	margin-bottom: 12rpx;
+	display: block;
+}
+
+.plan-status {
+	padding: 4rpx 12rpx;
+	border-radius: 12rpx;
+	font-size: 20rpx;
+	font-weight: 500;
+	display: inline-block;
+}
+
+.plan-status.completed {
+	background: linear-gradient(135deg, #10b981, #059669);
+	color: white;
+}
+
+.plan-status.pending {
+	background: linear-gradient(135deg, #f59e0b, #d97706);
+	color: white;
+}
+
+.plan-status.rest {
+	background: linear-gradient(135deg, #6b7280, #4b5563);
+	color: white;
+}
+
+.no-plan {
+	text-align: center;
+	color: #9ca3af;
+}
+
+.no-plan-text {
+	font-size: 22rpx;
+	margin-bottom: 8rpx;
+	display: block;
+}
+
+.add-plan-hint {
+	font-size: 20rpx;
+	color: #3b82f6;
+	cursor: pointer;
+	transition: color 0.3s ease;
+}
+
+.add-plan-hint:hover {
+	color: #1d4ed8;
+}
+
 @media screen and (max-width: 768px) {
 	.container {
 		width: 90%;
@@ -638,6 +855,38 @@ export default {
 		padding: 10rpx;
 		margin: 0 5rpx;
 		font-size: 24rpx;
+	}
+	
+	.weekly-plan-list {
+		grid-template-columns: 1fr;
+		gap: 12rpx;
+	}
+	
+	.day-plan-card {
+		min-height: auto;
+		padding: 16rpx;
+		flex-direction: row;
+		align-items: center;
+	}
+	
+	.day-plan-header {
+		margin-bottom: 0;
+		margin-right: 16rpx;
+		border-bottom: none;
+		border-right: 1rpx solid #e5e7eb;
+		padding-bottom: 0;
+		padding-right: 16rpx;
+		text-align: left;
+		min-width: 120rpx;
+	}
+	
+	.day-plan-content {
+		flex: 1;
+		justify-content: flex-start;
+	}
+	
+	.plan-info, .no-plan {
+		text-align: left;
 	}
 }
 </style>

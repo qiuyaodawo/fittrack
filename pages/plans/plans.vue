@@ -5,6 +5,7 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
+				<view class="nav-item" @tap="navigateTo('history')">记录</view>
 				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
 				<view class="nav-item active">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
@@ -170,9 +171,23 @@
 						<text class="form-label">训练周期</text>
 						<view class="week-control">
 							<view class="week-selector">
-								<button class="week-btn" @tap="changeWeeks(-1)" :disabled="customPlan.weeks <= 1">−</button>
-								<text class="week-display">{{customPlan.weeks}}周</text>
-								<button class="week-btn" @tap="changeWeeks(1)" :disabled="customPlan.weeks >= 16">+</button>
+								<button class="week-btn decrease" @tap="changeWeeks(-1)" :disabled="customPlan.weeks <= 1">
+									<text class="btn-icon">−</text>
+								</button>
+								<input 
+									type="number" 
+									class="week-input" 
+									v-model="weeksInputValue"
+									@input="handleWeeksInput"
+									@blur="validateWeeksInput"
+									placeholder="周数"
+									min="1"
+									max="99"
+								/>
+								<text class="week-unit">周</text>
+								<button class="week-btn increase" @tap="changeWeeks(1)" :disabled="customPlan.weeks >= 99">
+									<text class="btn-icon">+</text>
+								</button>
 							</view>
 						</view>
 					</view>
@@ -263,14 +278,23 @@
 							
 							<view class="exercise-list" v-if="dayTraining.exercises.length > 0">
 								<view class="exercise-item" v-for="(exercise, index) in dayTraining.exercises" :key="index">
-									<view class="exercise-info">
-										<text class="exercise-name">{{exercise.name}}</text>
-										<text class="exercise-details">{{exercise.sets}}组 x {{exercise.reps}}次</text>
-										<text class="exercise-weight" v-if="exercise.weight">{{exercise.weight}}kg</text>
-									</view>
-									<view class="exercise-actions">
-										<button class="btn btn-small btn-outline" @tap="editExercise(index)">编辑</button>
-										<button class="btn btn-small btn-danger" @tap="removeExercise(index)">删除</button>
+									<view class="exercise-card">
+										<view class="exercise-header">
+											<view class="exercise-name-tag">{{exercise.name}}</view>
+											<view class="exercise-actions">
+												<button class="btn btn-small btn-outline" @tap="editExercise(index)">编辑</button>
+												<button class="btn btn-small btn-danger" @tap="removeExercise(index)">删除</button>
+											</view>
+										</view>
+										<view class="exercise-details">
+											<view class="detail-tag sets-tag">{{exercise.sets}}组</view>
+											<view class="detail-tag reps-tag">{{exercise.reps}}次</view>
+											<view class="detail-tag weight-tag" v-if="exercise.weight">{{exercise.weight}}kg</view>
+											<view class="detail-tag rest-tag" v-if="exercise.rest">休息{{exercise.rest}}</view>
+										</view>
+										<view class="exercise-notes" v-if="exercise.notes">
+											<text class="notes-text">{{exercise.notes}}</text>
+										</view>
 									</view>
 								</view>
 							</view>
@@ -407,6 +431,7 @@ export default {
 				currentWeek: 1,
 				weekPlans: {} // 存储每周的训练安排，格式：{1: {周一: {...}, 周二: {...}}, 2: {...}}
 			},
+			weeksInputValue: 1, // 周数输入显示值
 			
 			// 日程编辑器相关数据
 			showDayEditor: false,
@@ -611,6 +636,7 @@ export default {
 				currentWeek: 1,
 				weekPlans: {}
 			};
+			this.weeksInputValue = 1;
 			// 强制更新视图
 			this.$forceUpdate();
 			this.showCreatePlanModal = true;
@@ -623,12 +649,132 @@ export default {
 		// 周数控制方法
 		changeWeeks(delta) {
 			const newWeeks = this.customPlan.weeks + delta;
-			if (newWeeks >= 1 && newWeeks <= 16) {
+			if (newWeeks >= 1 && newWeeks <= 99) {
 				this.customPlan.weeks = newWeeks;
+				this.weeksInputValue = newWeeks; // 同步更新显示值
 				// 如果当前周数超出范围，调整到最后一周
 				if (this.customPlan.currentWeek > newWeeks) {
 					this.customPlan.currentWeek = newWeeks;
 				}
+			}
+		},
+		
+		// 处理周数输入
+		handleWeeksInput(e) {
+			let value = e.detail.value.toString();
+			
+			// 移除所有非数字字符
+			value = value.replace(/\D/g, '');
+			
+			// 检查输入长度是否超过2位（防止输入999等超长数字）
+			if (value.length > 2) {
+				// 如果输入超过2位，自动调整为99
+				this.weeksInputValue = 99;
+				this.customPlan.weeks = 99;
+				// 如果当前编辑的周数超出了新的总周数，调整到最后一周
+				if (this.customPlan.currentWeek > 99) {
+					this.customPlan.currentWeek = 99;
+				}
+				uni.showToast({
+					title: '最大值为99，已自动调整',
+					icon: 'none',
+					duration: 1500
+				});
+				return;
+			}
+			
+			// 如果输入为空或者删除了所有内容
+			if (value === '') {
+				// 暂时允许为空，等失焦时处理
+				return;
+			}
+			
+			let numValue = parseInt(value);
+			
+			// 如果解析失败
+			if (isNaN(numValue)) {
+				return;
+			}
+			
+			// 当输入的数值超过99时，自动调整为99
+			if (numValue > 99) {
+				// 自动调整为99
+				this.weeksInputValue = 99;
+				this.customPlan.weeks = 99;
+				// 如果当前编辑的周数超出了新的总周数，调整到最后一周
+				if (this.customPlan.currentWeek > 99) {
+					this.customPlan.currentWeek = 99;
+				}
+				uni.showToast({
+					title: '最大值为99，已自动调整',
+					icon: 'none',
+					duration: 1500
+				});
+				return;
+			}
+			
+			// 处理零值
+			if (numValue === 0) {
+				numValue = 1;
+				uni.showToast({
+					title: '最小值为1，已自动调整',
+					icon: 'none', 
+					duration: 1500
+				});
+			}
+			
+			// 更新值
+			this.weeksInputValue = numValue;
+			this.customPlan.weeks = numValue;
+			
+			// 如果当前编辑的周数超出了新的总周数，调整到最后一周
+			if (this.customPlan.currentWeek > numValue) {
+				this.customPlan.currentWeek = numValue;
+			}
+		},
+		
+		// 验证周数输入（失焦时）
+		validateWeeksInput(e) {
+			let value = e.detail.value.toString();
+			
+			// 移除非数字字符
+			value = value.replace(/\D/g, '');
+			
+			let numValue = parseInt(value);
+			let showToast = false;
+			let toastMessage = '';
+			
+			// 检查是否为有效数字
+			if (isNaN(numValue) || value === '' || numValue === 0) {
+				numValue = 1;
+				showToast = true;
+				toastMessage = '周数不能为空，已设置为1';
+			} else if (numValue < 1) {
+				numValue = 1;
+				showToast = true;
+				toastMessage = '周数不能小于1，已自动调整为1';
+			} else if (numValue > 99) {
+				numValue = 99;
+				showToast = true;
+				toastMessage = '周数不能大于99，已自动调整为99';
+			}
+			
+			// 同步更新两个值
+			this.customPlan.weeks = numValue;
+			this.weeksInputValue = numValue;
+			
+			// 如果当前编辑的周数超出了总周数，调整到最后一周
+			if (this.customPlan.currentWeek > numValue) {
+				this.customPlan.currentWeek = numValue;
+			}
+			
+			// 显示调整提示
+			if (showToast) {
+				uni.showToast({
+					title: toastMessage,
+					icon: 'none',
+					duration: 2000
+				});
 			}
 		},
 		
@@ -2440,52 +2586,115 @@ export default {
 }
 
 .week-control {
-	margin: 40rpx 0;
+	margin-top: 20rpx;
 }
 
 .week-selector {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 30rpx;
-}
-
-.week-label {
-	font-size: 32rpx;
-	font-weight: 500;
-	color: #333;
-}
-
-.week-picker {
-	display: flex;
-	align-items: center;
-	gap: 20rpx;
+	justify-content: center;
+	gap: 15rpx;
+	background: #f8f9fa;
+	padding: 15rpx;
+	border-radius: 16rpx;
+	border: 2rpx solid #e9ecef;
 }
 
 .week-btn {
-	width: 60rpx;
-	height: 60rpx;
+	width: 72rpx;
+	height: 72rpx;
 	border-radius: 50%;
-	background: var(--primary-color);
-	color: white;
 	border: none;
 	font-size: 32rpx;
+	font-weight: 600;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	transition: all 0.3s;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.week-btn.decrease {
+	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+	color: white;
+}
+
+.week-btn.increase {
+	background: linear-gradient(135deg, #51cf66, #40c057);
+	color: white;
+}
+
+.week-btn:hover {
+	transform: scale(1.05);
+	box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.15);
 }
 
 .week-btn:disabled {
-	background: #ddd;
-	color: #999;
+	background: #e9ecef !important;
+	color: #adb5bd !important;
+	transform: none !important;
+	box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05) !important;
+	cursor: not-allowed;
 }
 
-.week-number {
+.btn-icon {
+	font-size: 28rpx;
+	font-weight: bold;
+}
+
+.week-input {
+	width: 120rpx;
+	height: 72rpx;
+	text-align: center;
 	font-size: 32rpx;
 	font-weight: 600;
-	color: var(--primary-color);
-	min-width: 100rpx;
-	text-align: center;
+	color: #333;
+	background: white;
+	border: 2rpx solid #dee2e6;
+	border-radius: 12rpx;
+	box-shadow: inset 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+	transition: all 0.3s;
+}
+
+.week-input:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 4rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+}
+
+.week-unit {
+	font-size: 28rpx;
+	font-weight: 500;
+	color: #666;
+	min-width: 40rpx;
+}
+
+/* 移动端优化 */
+@media screen and (max-width: 768px) {
+	.week-selector {
+		gap: 10rpx;
+		padding: 12rpx;
+	}
+	
+	.week-btn {
+		width: 64rpx;
+		height: 64rpx;
+		font-size: 28rpx;
+	}
+	
+	.btn-icon {
+		font-size: 24rpx;
+	}
+	
+	.week-input {
+		width: 100rpx;
+		height: 64rpx;
+		font-size: 28rpx;
+	}
+	
+	.week-unit {
+		font-size: 24rpx;
+	}
 }
 
 .week-selection-container {
@@ -2640,5 +2849,329 @@ export default {
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
+}
+
+/* 表单样式 */
+.form-group {
+	margin-bottom: 30rpx;
+}
+
+.form-label {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #333;
+	margin-bottom: 15rpx;
+	display: block;
+}
+
+.form-input {
+	width: 100%;
+	height: 88rpx;
+	padding: 0 24rpx;
+	font-size: 28rpx;
+	color: #333;
+	background-color: #fff;
+	border: 2rpx solid #e1e8ed;
+	border-radius: 12rpx;
+	box-sizing: border-box;
+	transition: all 0.3s ease;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.form-input:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 6rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+	background-color: #fcfcfd;
+}
+
+.form-input::placeholder {
+	color: #9ca3af;
+	font-size: 26rpx;
+}
+
+.form-textarea {
+	width: 100%;
+	min-height: 160rpx;
+	padding: 20rpx 24rpx;
+	font-size: 28rpx;
+	color: #333;
+	background-color: #fff;
+	border: 2rpx solid #e1e8ed;
+	border-radius: 12rpx;
+	box-sizing: border-box;
+	resize: vertical;
+	transition: all 0.3s ease;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+	line-height: 1.5;
+}
+
+.form-textarea:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 6rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+	background-color: #fcfcfd;
+}
+
+.form-textarea::placeholder {
+	color: #9ca3af;
+	font-size: 26rpx;
+}
+
+/* 动作选择样式 */
+.exercise-categories {
+	margin-top: 20rpx;
+}
+
+.category {
+	margin-bottom: 30rpx;
+}
+
+.category-name {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #374151;
+	margin-bottom: 15rpx;
+	display: block;
+	padding: 8rpx 16rpx;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: -webkit-linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	border-radius: 20rpx;
+	text-align: center;
+}
+
+.exercise-options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	margin-top: 15rpx;
+}
+
+.exercise-option {
+	padding: 12rpx 20rpx;
+	background-color: #f8fafc;
+	border: 2rpx solid #e2e8f0;
+	border-radius: 24rpx;
+	font-size: 26rpx;
+	color: #475569;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 60rpx;
+	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+
+.exercise-option:hover {
+	background-color: #e2e8f0;
+	border-color: #cbd5e1;
+	transform: translateY(-2rpx);
+	box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.exercise-option.selected {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	border-color: #1d4ed8;
+	color: white;
+	font-weight: 600;
+	transform: translateY(-2rpx);
+	box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.3);
+}
+
+.exercise-option:active {
+	transform: translateY(0);
+	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+/* 训练动作卡片样式 */
+.exercise-list {
+	margin-top: 20rpx;
+}
+
+.exercise-item {
+	margin-bottom: 20rpx;
+}
+
+.exercise-card {
+	background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+	border: 2rpx solid #e2e8f0;
+	border-radius: 16rpx;
+	padding: 24rpx;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+	transition: all 0.3s ease;
+}
+
+.exercise-card:hover {
+	transform: translateY(-2rpx);
+	box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.12);
+	border-color: var(--primary-color);
+}
+
+.exercise-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16rpx;
+}
+
+.exercise-name-tag {
+	background: linear-gradient(135deg, #667eea, #764ba2);
+	color: white;
+	padding: 8rpx 16rpx;
+	border-radius: 20rpx;
+	font-size: 26rpx;
+	font-weight: 600;
+	max-width: 60%;
+	text-align: center;
+	box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.3);
+}
+
+.exercise-actions {
+	display: flex;
+	gap: 8rpx;
+}
+
+.exercise-details {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8rpx;
+	margin-bottom: 12rpx;
+}
+
+.detail-tag {
+	padding: 6rpx 12rpx;
+	border-radius: 16rpx;
+	font-size: 22rpx;
+	font-weight: 500;
+	color: white;
+	text-align: center;
+	min-width: 60rpx;
+	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.sets-tag {
+	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+}
+
+.reps-tag {
+	background: linear-gradient(135deg, #51cf66, #40c057);
+}
+
+.weight-tag {
+	background: linear-gradient(135deg, #339af0, #228be6);
+}
+
+.rest-tag {
+	background: linear-gradient(135deg, #ffd43b, #fab005);
+	color: #333;
+}
+
+.exercise-notes {
+	background: rgba(241, 245, 249, 0.8);
+	padding: 12rpx 16rpx;
+	border-radius: 12rpx;
+	border-left: 4rpx solid var(--primary-color);
+	margin-top: 12rpx;
+}
+
+.notes-text {
+	font-size: 24rpx;
+	color: #64748b;
+	line-height: 1.4;
+}
+
+/* 其他样式改进 */
+.notes-input {
+	width: 100%;
+	min-height: 120rpx;
+	padding: 16rpx 20rpx;
+	font-size: 26rpx;
+	color: #333;
+	background-color: #f8fafc;
+	border: 2rpx solid #e2e8f0;
+	border-radius: 12rpx;
+	box-sizing: border-box;
+	resize: vertical;
+	transition: all 0.3s ease;
+	line-height: 1.5;
+}
+
+.notes-input:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 4rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+	background-color: white;
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20rpx;
+}
+
+.section-title {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #374151;
+}
+
+.empty-state {
+	text-align: center;
+	padding: 40rpx 20rpx;
+	color: #9ca3af;
+	font-size: 26rpx;
+	background: #f9fafb;
+	border-radius: 12rpx;
+	border: 2rpx dashed #d1d5db;
+}
+
+/* 响应式优化 */
+@media screen and (max-width: 768px) {
+	.form-input, .form-textarea {
+		font-size: 30rpx;
+		padding: 0 20rpx;
+	}
+	
+	.form-textarea {
+		padding: 18rpx 20rpx;
+		min-height: 140rpx;
+	}
+	
+	.exercise-option {
+		font-size: 28rpx;
+		padding: 14rpx 18rpx;
+		min-height: 64rpx;
+	}
+	
+	.category-name {
+		font-size: 30rpx;
+	}
+	
+	.exercise-card {
+		padding: 20rpx;
+	}
+	
+	.exercise-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12rpx;
+	}
+	
+	.exercise-name-tag {
+		max-width: 100%;
+		font-size: 28rpx;
+	}
+	
+	.exercise-actions {
+		align-self: flex-end;
+	}
+	
+	.detail-tag {
+		font-size: 24rpx;
+		padding: 8rpx 14rpx;
+	}
 }
 </style>

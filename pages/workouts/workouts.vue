@@ -5,6 +5,7 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
+				<view class="nav-item" @tap="navigateTo('history')">记录</view>
 				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item active">训练数据库</view>

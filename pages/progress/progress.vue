@@ -5,6 +5,7 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
+				<view class="nav-item" @tap="navigateTo('history')">记录</view>
 				<view class="nav-item active">进度追踪</view>
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
@@ -132,13 +133,7 @@
 					</view>
 				</view>
 				
-				<view class="form-group">
-					<text class="form-label">快速测试</text>
-					<view class="test-buttons">
-						<button class="btn-sm btn-outline" @tap="generateTestData">生成测试数据</button>
-						<button class="btn-sm btn-outline" @tap="clearAllData">清空所有数据</button>
-					</view>
-				</view>
+
 			</view>
 		</view>
 	</view>
@@ -653,120 +648,7 @@ export default {
 			}
 		},
 		
-		// 生成测试数据
-		generateTestData() {
-			uni.showModal({
-				title: '生成测试数据',
-				content: '这将生成一些示例训练记录来演示个人记录功能，确定继续吗？',
-				success: (res) => {
-					if (res.confirm) {
-						// 生成几个示例训练记录
-						const testWorkouts = [
-							{
-								id: Date.now() - 86400000 * 2,
-								name: '胸肌训练',
-								type: '力量训练',
-								date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-								startTime: '18:00',
-								exercises: [
-									{
-										name: '平板卧推',
-										sets: [
-											{ weight: '60', reps: '10', rest: '90' },
-											{ weight: '65', reps: '8', rest: '90' },
-											{ weight: '70', reps: '6', rest: '90' }
-										]
-									},
-									{
-										name: '哑铃飞鸟',
-										sets: [
-											{ weight: '20', reps: '12', rest: '60' },
-											{ weight: '22.5', reps: '10', rest: '60' }
-										]
-									}
-								],
-								status: '已完成',
-								duration: '55 分钟'
-							},
-							{
-								id: Date.now() - 86400000,
-								name: '腿部训练',
-								type: '力量训练',
-								date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-								startTime: '19:00',
-								exercises: [
-									{
-										name: '深蹲',
-										sets: [
-											{ weight: '80', reps: '12', rest: '120' },
-											{ weight: '90', reps: '10', rest: '120' },
-											{ weight: '100', reps: '8', rest: '120' }
-										]
-									},
-									{
-										name: '硬拉',
-										sets: [
-											{ weight: '120', reps: '8', rest: '180' },
-											{ weight: '130', reps: '6', rest: '180' }
-										]
-									}
-								],
-								status: '已完成',
-								duration: '65 分钟'
-							}
-						];
-						
-						// 保存测试数据
-						let workoutHistory = uni.getStorageSync('workoutHistory') || [];
-						testWorkouts.forEach(workout => {
-							workoutHistory.unshift(workout);
-						});
-						uni.setStorageSync('workoutHistory', workoutHistory);
-						
-						// 刷新页面数据
-						this.loadWorkoutHistory();
-						this.updatePersonalRecords();
-						this.updateStrengthProgress();
-						this.updateTrainingStats();
-						
-						uni.showToast({
-							title: '测试数据生成成功',
-							icon: 'success'
-						});
-					}
-				}
-			});
-		},
-		
-		// 清空所有数据
-		clearAllData() {
-			uni.showModal({
-				title: '清空数据',
-				content: '这将清空所有训练记录和个人记录，确定继续吗？',
-				success: (res) => {
-					if (res.confirm) {
-						uni.removeStorageSync('workoutHistory');
-						uni.removeStorageSync('personalRecords');
-						uni.removeStorageSync('strengthProgress');
-						
-						// 重置页面数据
-						this.workoutLogs = [];
-						this.personalRecords = [];
-						this.strengthProgress = [];
-						this.trainingStats = {
-							thisWeek: 0,
-							thisMonth: 0,
-							total: 0,
-							avgDuration: '0 分钟'
-						};
-								uni.showToast({
-							title: '数据已清空',
-							icon: 'success'
-						});
-					}
-				}
-			});
-		},
+
 		
 		// 数据同步方法
 		async syncData() {
