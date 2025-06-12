@@ -80,9 +80,8 @@
 										v-for="(exercise, idx) in day.exercises" 
 										:key="idx"
 										@tap="editExerciseInPreview(index, idx, exercise)">
-										<text class="exercise-text">• {{exercise}}</text>
-										<view class="edit-hint">
-											<text class="hint-text">点击编辑</text>
+										<view class="exercise-info">
+											<text class="exercise-name">• {{getExerciseDisplayName(exercise)}}</text>
 										</view>
 									</view>
 									<button class="add-exercise-btn-mini" @tap="addExerciseInPreview(index)">
@@ -134,7 +133,61 @@
 				<view class="modal-body">
 					<view class="form-group">
 						<text class="form-label">动作名称</text>
-						<input v-model="editingExercise.name" placeholder="请输入动作名称" class="form-input" />
+						<input v-model="editingExercise.name" placeholder="请输入动作名称" class="form-input readonly-input" readonly disabled />
+					</view>
+					
+					<!-- 组数设置 -->
+					<view class="form-group">
+						<text class="form-label">组数</text>
+						<view class="sets-selector">
+							<button class="sets-btn decrease" @tap="decreaseEditSets" :disabled="editingExercise.sets <= 1">
+								<text class="btn-icon">−</text>
+							</button>
+							<input 
+								type="number" 
+								class="sets-input" 
+								v-model="editingExercise.sets"
+								@input="validateEditSetsInput"
+								@blur="validateEditSetsInput"
+								placeholder="组数"
+								min="1"
+								max="99"
+							/>
+							<text class="sets-unit">组</text>
+							<button class="sets-btn increase" @tap="increaseEditSets" :disabled="editingExercise.sets >= 99">
+								<text class="btn-icon">+</text>
+							</button>
+						</view>
+					</view>
+					
+					<!-- 次数设置 -->
+					<view class="form-group">
+						<text class="form-label">次数</text>
+						<view class="sets-selector">
+							<button class="sets-btn decrease" @tap="decreaseEditReps" :disabled="editingExercise.reps <= 1">
+								<text class="btn-icon">−</text>
+							</button>
+							<input 
+								type="number" 
+								class="sets-input" 
+								v-model="editingExercise.reps"
+								@input="validateEditRepsInput"
+								@blur="validateEditRepsInput"
+								placeholder="次数"
+								min="1"
+								max="99"
+							/>
+							<text class="sets-unit">次</text>
+							<button class="sets-btn increase" @tap="increaseEditReps" :disabled="editingExercise.reps >= 99">
+								<text class="btn-icon">+</text>
+							</button>
+						</view>
+					</view>
+					
+					<!-- 组间休息设置 -->
+					<view class="form-group">
+						<text class="form-label">组间休息 (秒)</text>
+						<input type="number" v-model="editingExercise.rest" placeholder="请输入休息时间" class="form-input" />
 					</view>
 					
 					<view class="action-buttons" v-if="!isAddingExercise">
@@ -414,7 +467,10 @@ export default {
 			// 动作编辑相关
 			showExerciseEditModal: false,
 			editingExercise: {
-				name: ''
+				name: '',
+				sets: 1,
+				reps: 1,
+				rest: '90'
 			},
 			editingDayIndex: -1,
 			editingExerciseIndex: -1,
@@ -574,10 +630,28 @@ export default {
 		},
 		
 		// 在预览中编辑动作
-		editExerciseInPreview(dayIndex, exerciseIndex, exerciseName) {
+		editExerciseInPreview(dayIndex, exerciseIndex, exerciseData) {
 			this.editingDayIndex = dayIndex;
 			this.editingExerciseIndex = exerciseIndex;
-			this.editingExercise.name = exerciseName;
+			
+			// 如果是字符串格式的动作名称，转换为对象格式
+			if (typeof exerciseData === 'string') {
+				this.editingExercise = {
+					name: exerciseData,
+					sets: 1,
+					reps: 1,
+					rest: '90'
+				};
+			} else {
+				// 如果已经是对象格式，确保动作名称是纯净的
+				this.editingExercise = {
+					name: this.extractPureName(exerciseData.name || exerciseData),
+					sets: exerciseData.sets || 1,
+					reps: exerciseData.reps || 1,
+					rest: exerciseData.rest || '90'
+				};
+			}
+			
 			this.isAddingExercise = false;
 			this.showExerciseEditModal = true;
 		},
@@ -586,7 +660,12 @@ export default {
 		addExerciseInPreview(dayIndex) {
 			this.editingDayIndex = dayIndex;
 			this.editingExerciseIndex = -1;
-			this.editingExercise.name = '';
+			this.editingExercise = {
+				name: '',
+				sets: 1,
+				reps: 1,
+				rest: '90'
+			};
 			this.isAddingExercise = true;
 			this.showExerciseEditModal = true;
 		},
@@ -597,15 +676,38 @@ export default {
 				return;
 			}
 			
+			// 获取原始动作名称（对于编辑操作，保持原始名称不变）
+			let finalName = this.editingExercise.name.trim();
+			if (!this.isAddingExercise) {
+				// 编辑时，确保使用原始的纯净动作名称，不允许修改
+				const originalExercise = this.previewPlan[this.editingDayIndex].exercises[this.editingExerciseIndex];
+				if (originalExercise) {
+					finalName = typeof originalExercise === 'string' 
+						? this.extractPureName(originalExercise)
+						: this.extractPureName(originalExercise.name || originalExercise);
+				}
+			} else {
+				// 添加新动作时，允许使用输入的名称
+				finalName = this.extractPureName(finalName);
+			}
+			
+			// 构造动作对象
+			const exerciseData = {
+				name: finalName,
+				sets: parseInt(this.editingExercise.sets) || 1,
+				reps: parseInt(this.editingExercise.reps) || 1,
+				rest: this.editingExercise.rest.trim()
+			};
+			
 			if (this.isAddingExercise) {
 				// 添加新动作
 				if (!this.previewPlan[this.editingDayIndex].exercises) {
 					this.previewPlan[this.editingDayIndex].exercises = [];
 				}
-				this.previewPlan[this.editingDayIndex].exercises.push(this.editingExercise.name.trim());
+				this.previewPlan[this.editingDayIndex].exercises.push(exerciseData);
 			} else {
 				// 编辑现有动作
-				this.previewPlan[this.editingDayIndex].exercises[this.editingExerciseIndex] = this.editingExercise.name.trim();
+				this.previewPlan[this.editingDayIndex].exercises[this.editingExerciseIndex] = exerciseData;
 			}
 			
 			this.closeExerciseEditModal();
@@ -624,8 +726,204 @@ export default {
 			this.showExerciseEditModal = false;
 			this.editingDayIndex = -1;
 			this.editingExerciseIndex = -1;
-			this.editingExercise.name = '';
+			this.editingExercise = {
+				name: '',
+				sets: 1,
+				reps: 1,
+				rest: '90'
+			};
 			this.isAddingExercise = false;
+		},
+		
+		// 组数控制方法
+		decreaseEditSets() {
+			if (this.editingExercise.sets > 1) {
+				this.editingExercise.sets--;
+			}
+		},
+		
+		increaseEditSets() {
+			if (this.editingExercise.sets < 99) {
+				this.editingExercise.sets++;
+			}
+		},
+		
+		validateEditSetsInput() {
+			let value = this.editingExercise.sets;
+			if (value !== undefined && value !== null) {
+				// 只允许数字
+				value = value.toString().replace(/[^\d]/g, '');
+				// 限制在1-99之间
+				if (value !== '') {
+					const num = parseInt(value);
+					if (num < 1) {
+						value = 1;
+					} else if (num > 99) {
+						value = 99;
+					}
+				} else {
+					value = 1;
+				}
+				this.editingExercise.sets = parseInt(value);
+			}
+		},
+		
+		// 次数控制方法
+		decreaseEditReps() {
+			if (this.editingExercise.reps > 1) {
+				this.editingExercise.reps--;
+			}
+		},
+		
+		increaseEditReps() {
+			if (this.editingExercise.reps < 99) {
+				this.editingExercise.reps++;
+			}
+		},
+		
+		validateEditRepsInput() {
+			let value = this.editingExercise.reps;
+			if (value !== undefined && value !== null) {
+				// 只允许数字
+				value = value.toString().replace(/[^\d]/g, '');
+				// 限制在1-99之间
+				if (value !== '') {
+					const num = parseInt(value);
+					if (num < 1) {
+						value = 1;
+					} else if (num > 99) {
+						value = 99;
+					}
+				} else {
+					value = 1;
+				}
+				this.editingExercise.reps = parseInt(value);
+			}
+		},
+		
+		// 提取纯净的动作名称（去除训练参数）
+		extractPureName(name) {
+			if (typeof name !== 'string') return name;
+			// 移除组数、次数、休息时间等信息，只保留动作名称
+			return name.split(' ')[0] || name;
+		},
+		
+		// 将字符串格式的动作转换为对象格式
+		convertExerciseToObject(exerciseStr) {
+			if (typeof exerciseStr === 'object') {
+				// 确保对象格式也有完整的属性
+				return {
+					name: exerciseStr.name || exerciseStr,
+					sets: exerciseStr.sets || 3,
+					reps: exerciseStr.reps || 10,
+					rest: exerciseStr.rest || '90'
+				};
+			}
+			
+			// 如果是非训练项目（如"拉伸"、"组间休息"等），直接返回默认格式
+			if (exerciseStr.includes('休息') || exerciseStr.includes('拉伸') || 
+				exerciseStr.includes('分钟') || exerciseStr.includes('轮') ||
+				exerciseStr.includes('心率') || exerciseStr.includes('低强度') ||
+				exerciseStr.includes('辅助') || exerciseStr.includes('激活')) {
+				return {
+					name: exerciseStr,
+					sets: 1,
+					reps: 1,
+					rest: '90'
+				};
+			}
+			
+			// 处理HIIT类型的训练（如"开合跳 30秒/休息30秒"）
+			const hiitMatch = exerciseStr.match(/^(.+?)\s+(\d+)秒\/休息(\d+)秒/);
+			if (hiitMatch) {
+				const workTime = parseInt(hiitMatch[2]);
+				const restTime = parseInt(hiitMatch[3]);
+				return {
+					name: hiitMatch[1],
+					sets: 3,
+					reps: workTime,
+					rest: restTime.toString()
+				};
+			}
+			
+			// 解析字符串格式的动作，如 "俯卧撑 3组 x 8-12次"
+			const parts = exerciseStr.split(' ');
+			const name = parts[0];
+			
+			// 默认值
+			let sets = 3;
+			let reps = 10;
+			let rest = '90';
+			
+			// 提取组数
+			const setsMatch = exerciseStr.match(/(\d+)组/);
+			if (setsMatch) {
+				sets = parseInt(setsMatch[1]);
+			}
+			
+			// 提取次数（取范围的中间值）
+			const repsMatch = exerciseStr.match(/x\s*(\d+)(?:-(\d+))?次/);
+			if (repsMatch) {
+				const min = parseInt(repsMatch[1]);
+				const max = repsMatch[2] ? parseInt(repsMatch[2]) : min;
+				reps = Math.round((min + max) / 2);
+			}
+			
+			// 提取秒数（如果是时间类型，如平板支撑）
+			const timeMatch = exerciseStr.match(/(\d+)(?:-(\d+))?秒(?!\/)/);
+			if (timeMatch && !exerciseStr.includes('/')) {
+				const min = parseInt(timeMatch[1]);
+				const max = timeMatch[2] ? parseInt(timeMatch[2]) : min;
+				reps = Math.round((min + max) / 2);
+			}
+			
+			// 确保所有值都是有效的
+			sets = Math.max(1, Math.min(99, sets));
+			reps = Math.max(1, Math.min(99, reps));
+			
+			return {
+				name: name,
+				sets: sets,
+				reps: reps,
+				rest: rest
+			};
+		},
+		
+		// 转换整个计划数据
+		convertPlanData(planData) {
+			return planData.map(day => ({
+				...day,
+				exercises: day.exercises.map(exercise => this.convertExerciseToObject(exercise))
+			}));
+		},
+		
+		// 获取动作显示名称
+		getExerciseDisplayName(exercise) {
+			if (typeof exercise === 'string') {
+				return exercise;
+			} else if (typeof exercise === 'object' && exercise.name) {
+				// 构造完整的训练参数显示
+				let pureName = this.extractPureName(exercise.name);
+				let displayName = pureName;
+				
+				// 添加组数信息
+				if (exercise.sets && exercise.sets > 0) {
+					displayName += ` ${exercise.sets}组`;
+				}
+				
+				// 添加次数信息
+				if (exercise.reps && exercise.reps > 0) {
+					displayName += ` × ${exercise.reps}次`;
+				}
+				
+				// 添加休息时间信息 - 确保总是显示休息时间
+				const restTime = exercise.rest || '90';
+				displayName += ` 休息${restTime}秒`;
+				
+				return displayName;
+			} else {
+				return exercise.toString();
+			}
 		},
 		// 创建新计划方法
 		createPlan() {
@@ -1255,15 +1553,47 @@ export default {
 				0: {
 					初级: {
 						3: [ // 3天
-							{ day: '周一', focus: '上肢综合', exercises: ['俯卧撑 3组 x 8-12次', '哑铃弯举 3组 x 10-12次', '三头肌撑体 3组 x 8-10次', '侧平举 3组 x 12-15次'] },
-							{ day: '周三', focus: '下肢综合', exercises: ['徒手深蹲 3组 x 15-20次', '弓步蹲 3组 x 10-12次', '小腿提踵 3组 x 15-20次', '臀桥 3组 x 12-15次'] },
-							{ day: '周五', focus: '核心全身', exercises: ['平板支撑 3组 x 30-45秒', '卷腹 3组 x 15-20次', '俯卧撑 2组 x 8-10次', '深蹲 2组 x 12-15次'] }
+							{ day: '周一', focus: '上肢综合', exercises: [
+								{name: '俯卧撑', sets: 3, reps: 10, rest: '90'},
+								{name: '哑铃弯举', sets: 3, reps: 12, rest: '90'},
+								{name: '三头肌撑体', sets: 3, reps: 8, rest: '90'},
+								{name: '侧平举', sets: 3, reps: 12, rest: '90'}
+							]},
+							{ day: '周三', focus: '下肢综合', exercises: [
+								{name: '徒手深蹲', sets: 3, reps: 15, rest: '90'},
+								{name: '弓步蹲', sets: 3, reps: 10, rest: '90'},
+								{name: '小腿提踵', sets: 3, reps: 18, rest: '90'},
+								{name: '臀桥', sets: 3, reps: 12, rest: '90'}
+							]},
+							{ day: '周五', focus: '核心全身', exercises: [
+								{name: '平板支撑', sets: 3, reps: 30, rest: '90'},
+								{name: '卷腹', sets: 3, reps: 15, rest: '90'},
+								{name: '俯卧撑', sets: 2, reps: 8, rest: '90'},
+								{name: '深蹲', sets: 2, reps: 12, rest: '90'}
+							]}
 						],
 						4: [ // 4天
-							{ day: '周一', focus: '胸肌', exercises: ['俯卧撑 3组 x 8-12次', '哑铃卧推 3组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
-							{ day: '周二', focus: '背部', exercises: ['辅助引体向上 3组 x 5-8次', '哑铃划船 3组 x 10-12次', '坐姿划船 3组 x 12-15次'] },
-							{ day: '周四', focus: '腿部', exercises: ['徒手深蹲 3组 x 15-20次', '哑铃深蹲 3组 x 12-15次', '腿举 3组 x 15-20次'] },
-							{ day: '周五', focus: '肩部手臂', exercises: ['哑铃肩推 3组 x 10-12次', '侧平举 3组 x 12-15次', '哑铃弯举 3组 x 12-15次', '三头肌下压 3组 x 12-15次'] }
+							{ day: '周一', focus: '胸肌', exercises: [
+								{name: '俯卧撑', sets: 3, reps: 10, rest: '90'},
+								{name: '哑铃卧推', sets: 3, reps: 12, rest: '90'},
+								{name: '哑铃飞鸟', sets: 3, reps: 12, rest: '90'}
+							]},
+							{ day: '周二', focus: '背部', exercises: [
+								{name: '辅助引体向上', sets: 3, reps: 6, rest: '90'},
+								{name: '哑铃划船', sets: 3, reps: 12, rest: '90'},
+								{name: '坐姿划船', sets: 3, reps: 12, rest: '90'}
+							]},
+							{ day: '周四', focus: '腿部', exercises: [
+								{name: '徒手深蹲', sets: 3, reps: 18, rest: '90'},
+								{name: '哑铃深蹲', sets: 3, reps: 12, rest: '90'},
+								{name: '腿举', sets: 3, reps: 18, rest: '90'}
+							]},
+							{ day: '周五', focus: '肩部手臂', exercises: [
+								{name: '哑铃肩推', sets: 3, reps: 12, rest: '90'},
+								{name: '侧平举', sets: 3, reps: 12, rest: '90'},
+								{name: '哑铃弯举', sets: 3, reps: 12, rest: '90'},
+								{name: '三头肌下压', sets: 3, reps: 12, rest: '90'}
+							]}
 						],
 						5: [ // 5天
 							{ day: '周一', focus: '胸肌', exercises: ['俯卧撑 3组 x 8-12次', '哑铃卧推 3组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
@@ -1618,7 +1948,9 @@ export default {
 				});
 			}
 			
-			return selectedPlan || [];
+			// 转换计划数据为对象格式
+			const convertedPlan = this.convertPlanData(selectedPlan || []);
+			return convertedPlan;
 		},
 		
 		generateMuscleGainPlan(schedule, level) {
@@ -1649,21 +1981,22 @@ export default {
 			const levelName = ['初级', '中级', '高级'][level];
 			const ex = exercises[levelName];
 			
+			let plan = [];
 			if (schedule.length === 3) {
-				return [
+				plan = [
 					{ day: schedule[0], focus: '胸肌 & 三头肌', exercises: [...ex.chest, ...ex.arms.slice(1, 2)] },
 					{ day: schedule[1], focus: '背部 & 二头肌', exercises: [...ex.back, ...ex.arms.slice(0, 1)] },
 					{ day: schedule[2], focus: '腿部 & 肩部', exercises: [...ex.legs, ...ex.shoulders.slice(0, 2)] }
 				];
 			} else if (schedule.length === 4) {
-				return [
+				plan = [
 					{ day: schedule[0], focus: '胸肌', exercises: ex.chest },
 					{ day: schedule[1], focus: '背部', exercises: ex.back },
 					{ day: schedule[2], focus: '腿部', exercises: ex.legs },
 					{ day: schedule[3], focus: '肩部 & 手臂', exercises: [...ex.shoulders, ...ex.arms] }
 				];
 			} else if (schedule.length === 5) {
-				return [
+				plan = [
 					{ day: schedule[0], focus: '胸肌', exercises: ex.chest },
 					{ day: schedule[1], focus: '背部', exercises: ex.back },
 					{ day: schedule[2], focus: '腿部', exercises: ex.legs },
@@ -1671,7 +2004,7 @@ export default {
 					{ day: schedule[4], focus: '手臂', exercises: ex.arms }
 				];
 			} else {
-				return [
+				plan = [
 					{ day: schedule[0], focus: '胸肌', exercises: ex.chest },
 					{ day: schedule[1], focus: '背部', exercises: ex.back },
 					{ day: schedule[2], focus: '腿部 (股四头肌)', exercises: ex.legs.slice(0, 2) },
@@ -1680,6 +2013,9 @@ export default {
 					{ day: schedule[5], focus: '腿部 (后链)', exercises: [ex.legs[1], '臀桥 3组 x 15-20次', '小腿提踵 4组 x 15-20次'] }
 				];
 			}
+			
+			// 转换计划数据为对象格式
+			return this.convertPlanData(plan);
 		},
 		
 		generateFatLossPlan(schedule, level) {
@@ -1715,7 +2051,8 @@ export default {
 				}
 			}
 			
-			return plan;
+			// 转换计划数据为对象格式
+			return this.convertPlanData(plan || []);
 		},
 		
 		generateStrengthPlan(schedule, level) {
@@ -1747,11 +2084,12 @@ export default {
 			const ex = exercises[levelName];
 			
 			if (schedule.length === 3) {
-				return [
+				const plan = [
 					{ day: schedule[0], focus: '深蹲日', exercises: [ex.squat, ex.bench, '辅助练习 2-3组'] },
 					{ day: schedule[1], focus: '卧推日', exercises: [ex.bench, ex.row, '辅助练习 2-3组'] },
 					{ day: schedule[2], focus: '硬拉日', exercises: [ex.deadlift, ex.press, '辅助练习 2-3组'] }
 				];
+				return this.convertPlanData(plan);
 			} else {
 				const plan = [];
 				const mainLifts = [ex.squat, ex.bench, ex.deadlift, ex.press, ex.row];
@@ -1766,7 +2104,7 @@ export default {
 					});
 				}
 				
-				return plan;
+				return this.convertPlanData(plan);
 			}
 		},
 		
@@ -1803,7 +2141,8 @@ export default {
 				}
 			}
 			
-			return plan;
+			// 转换计划数据为对象格式
+			return this.convertPlanData(plan || []);
 		},		async savePlan() {
 			if (!this.previewPlan || this.previewPlan.length === 0) {
 				uni.showToast({
@@ -2281,6 +2620,88 @@ export default {
 	color: var(--text-color-light);
 }
 
+.exercise-info {
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+}
+
+.exercise-name {
+	font-size: 26rpx;
+	color: var(--text-color-light);
+}
+
+.exercise-details {
+	display: flex;
+	gap: 12rpx;
+	margin-left: 20rpx;
+}
+
+.detail-item {
+	font-size: 22rpx;
+	color: var(--primary-color);
+	background-color: rgba(59, 130, 246, 0.1);
+	padding: 4rpx 8rpx;
+	border-radius: 4rpx;
+}
+
+// 组数控制器样式
+.sets-selector {
+	display: flex;
+	align-items: center;
+	gap: 15rpx;
+	justify-content: center;
+}
+
+.sets-btn {
+	width: 60rpx;
+	height: 60rpx;
+	border: 2rpx solid var(--primary-color);
+	background-color: #fff;
+	color: var(--primary-color);
+	border-radius: 8rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 28rpx;
+	font-weight: bold;
+}
+
+.sets-btn:disabled {
+	opacity: 0.3;
+	border-color: #ccc;
+	color: #ccc;
+}
+
+.sets-btn.decrease,
+.sets-btn.increase {
+	&:active:not(:disabled) {
+		background-color: var(--primary-color);
+		color: #fff;
+	}
+}
+
+.sets-input {
+	width: 120rpx;
+	height: 60rpx;
+	text-align: center;
+	border: 2rpx solid var(--border-color);
+	border-radius: 8rpx;
+	font-size: 28rpx;
+}
+
+.sets-unit {
+	font-size: 28rpx;
+	color: var(--text-color);
+}
+
+// 只读输入框样式
+.form-input[readonly] {
+	background-color: #f8f9fa;
+	color: var(--text-color-light);
+	cursor: not-allowed;
+}
+
 .my-plans {
 	margin-top: 40rpx;
 }
@@ -2429,6 +2850,47 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+/* 美化的关闭按钮 */
+.close-btn {
+	width: 60rpx;
+	height: 60rpx;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+	color: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 32rpx;
+	font-weight: bold;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 4rpx 12rpx rgba(238, 90, 82, 0.3);
+	
+	&:hover {
+		transform: translateY(-2rpx);
+		box-shadow: 0 6rpx 16rpx rgba(238, 90, 82, 0.4);
+	}
+	
+	&:active {
+		transform: scale(0.95);
+		box-shadow: 0 2rpx 8rpx rgba(238, 90, 82, 0.3);
+	}
+}
+
+/* 只读输入框的增强样式 */
+.readonly-input {
+	background-color: #f8f9fa !important;
+	color: #6c757d !important;
+	cursor: not-allowed !important;
+	border-color: #e9ecef !important;
+	user-select: none;
+	pointer-events: none;
+	
+	&::placeholder {
+		color: #adb5bd !important;
+	}
 }
 
 .modal-body {
