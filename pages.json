@@ -41,6 +41,12 @@
 			"style": {
 				"navigationBarTitleText": "记录训练"
 			}
+		},
+		{
+			"path": "pages/history/history",
+			"style": {
+				"navigationBarTitleText": "训练记录"
+			}
 		}
 	],
 	"globalStyle": {

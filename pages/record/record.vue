@@ -5,6 +5,7 @@
 			<view class="logo">FitTrack</view>
 			<view class="nav-links">
 				<view class="nav-item" @tap="navigateTo('index')">首页</view>
+				<view class="nav-item" @tap="navigateTo('history')">记录</view>
 				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
@@ -630,16 +631,18 @@ export default {
 			});
 			
 			try {
-				// 构造训练记录数据
-				const workoutData = {
-					id: Date.now(),
-					name: this.workoutInfo.name,
-					type: this.workoutTypes[this.workoutTypeIndex],
-					date: this.workoutInfo.date,
-					exercises: this.selectedExercises,
-					status: '已完成',
-					duration: this.calculateDuration()
-				};
+							// 构造训练记录数据
+			const now = new Date();
+			const workoutData = {
+				id: Date.now(),
+				name: this.workoutInfo.name,
+				type: this.workoutTypes[this.workoutTypeIndex],
+				date: this.workoutInfo.date,
+				startTime: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'),
+				exercises: this.selectedExercises,
+				status: '已完成',
+				duration: this.calculateDuration()
+			};
 				
 				// 保存到本地存储
 				let workoutHistory = uni.getStorageSync('workoutHistory') || [];
