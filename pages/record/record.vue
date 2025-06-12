@@ -156,6 +156,65 @@
 				</view>
 			</view>
 		</view>
+		
+		<!-- 编辑动作弹窗 -->
+		<view class="modal" v-if="showEditExerciseModal" @tap.self="closeEditExerciseModal">
+			<view class="modal-content edit-exercise-modal">
+				<view class="modal-header">
+					<text class="modal-title">编辑动作</text>
+					<view class="modal-close" @tap="closeEditExerciseModal">×</view>
+				</view>
+				
+				<view class="modal-body">
+					<!-- 组数设置 -->
+					<view class="edit-form-group">
+						<text class="edit-form-label">组数</text>
+						<view class="sets-selector">
+							<button class="sets-btn decrease" @tap="decreaseEditSets" :disabled="editingExercise.setsCount <= 1">
+								<text class="btn-icon">−</text>
+							</button>
+							<input 
+								type="number" 
+								class="sets-input" 
+								v-model="editingExercise.setsCount"
+								@input="validateEditSetsInput"
+								@blur="validateEditSetsInput"
+								placeholder="组数"
+								min="1"
+								max="99"
+							/>
+							<text class="sets-unit">组</text>
+							<button class="sets-btn increase" @tap="increaseEditSets" :disabled="editingExercise.setsCount >= 99">
+								<text class="btn-icon">+</text>
+							</button>
+						</view>
+					</view>
+					
+					<!-- 重量设置 -->
+					<view class="edit-form-group">
+						<text class="edit-form-label">重量 (kg)</text>
+						<input type="digit" class="edit-input" v-model="editingExercise.weight" placeholder="请输入重量" />
+					</view>
+					
+					<!-- 次数设置 -->
+					<view class="edit-form-group">
+						<text class="edit-form-label">次数</text>
+						<input type="number" class="edit-input" v-model="editingExercise.reps" placeholder="请输入次数" />
+					</view>
+					
+					<!-- 组间休息设置 -->
+					<view class="edit-form-group">
+						<text class="edit-form-label">组间休息 (秒)</text>
+						<input type="number" class="edit-input" v-model="editingExercise.rest" placeholder="请输入休息时间" />
+					</view>
+				</view>
+				
+				<view class="modal-footer">
+					<button class="btn btn-outline" @tap="closeEditExerciseModal">取消</button>
+					<button class="btn btn-primary" @tap="saveEditedExercise">保存</button>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -183,6 +242,13 @@ export default {
 			// 弹窗控制
 			showExerciseModal: false,
 			editingExerciseIndex: -1,
+			showEditExerciseModal: false,
+			editingExercise: {
+				setsCount: 1,
+				weight: '',
+				reps: '',
+				rest: '90'
+			},
 			
 			// 动作搜索和筛选
 			exerciseSearchKeyword: '',
@@ -546,7 +612,7 @@ export default {
 				name: exercise.name,
 				description: exercise.description,
 				category: exercise.category,
-				setsCount: 3, // 默认3组
+				setsCount: 1, // 默认1组
 				weight: '',
 				reps: '',
 				rest: '90',
@@ -557,7 +623,7 @@ export default {
 			
 			// 初始化该动作的组数输入框
 			const exerciseIndex = this.selectedExercises.length - 1;
-			this.$set(this.setCountInputs, exerciseIndex, '3');
+			this.$set(this.setCountInputs, exerciseIndex, '1');
 			
 			this.closeExerciseModal();
 			
@@ -622,10 +688,81 @@ export default {
 		
 		// 动作编辑和删除
 		editExercise(index) {
-			uni.showToast({
-				title: '编辑功能开发中',
-				icon: 'none'
-			});
+			this.editingExerciseIndex = index;
+			const exercise = this.selectedExercises[index];
+			this.editingExercise = {
+				setsCount: exercise.setsCount,
+				weight: exercise.weight,
+				reps: exercise.reps,
+				rest: exercise.rest
+			};
+			this.showEditExerciseModal = true;
+		},
+		
+		// 关闭编辑弹窗
+		closeEditExerciseModal() {
+			this.showEditExerciseModal = false;
+			this.editingExerciseIndex = -1;
+			this.editingExercise = {
+				setsCount: 1,
+				weight: '',
+				reps: '',
+				rest: '90'
+			};
+		},
+		
+		// 保存编辑的动作
+		saveEditedExercise() {
+			if (this.editingExerciseIndex >= 0) {
+				const exercise = this.selectedExercises[this.editingExerciseIndex];
+				exercise.setsCount = parseInt(this.editingExercise.setsCount) || 1;
+				exercise.weight = this.editingExercise.weight;
+				exercise.reps = this.editingExercise.reps;
+				exercise.rest = this.editingExercise.rest;
+				
+				// 更新对应的组数输入框
+				this.$set(this.setCountInputs, this.editingExerciseIndex, exercise.setsCount.toString());
+				
+				this.closeEditExerciseModal();
+				
+				uni.showToast({
+					title: '动作已更新',
+					icon: 'success'
+				});
+			}
+		},
+		
+		// 编辑时的组数控制
+		decreaseEditSets() {
+			if (this.editingExercise.setsCount > 1) {
+				this.editingExercise.setsCount--;
+			}
+		},
+		
+		increaseEditSets() {
+			if (this.editingExercise.setsCount < 99) {
+				this.editingExercise.setsCount++;
+			}
+		},
+		
+		validateEditSetsInput() {
+			let value = this.editingExercise.setsCount;
+			if (value !== undefined && value !== null) {
+				// 只允许数字
+				value = value.toString().replace(/[^\d]/g, '');
+				// 限制在1-99之间
+				if (value !== '') {
+					const num = parseInt(value);
+					if (num < 1) {
+						value = 1;
+					} else if (num > 99) {
+						value = 99;
+					}
+				} else {
+					value = 1;
+				}
+				this.editingExercise.setsCount = parseInt(value);
+			}
 		},
 		removeExercise(index) {
 			uni.showModal({
@@ -1369,5 +1506,62 @@ export default {
 	color: var(--text-color-light);
 	font-size: 22rpx;
 	border-radius: 12rpx;
+}
+
+// 编辑动作弹窗样式
+.edit-exercise-modal {
+	width: 85%;
+	max-height: 70%;
+}
+
+.edit-form-group {
+	margin-bottom: 30rpx;
+}
+
+.edit-form-label {
+	font-size: 28rpx;
+	font-weight: 500;
+	color: var(--text-color);
+	margin-bottom: 15rpx;
+	display: block;
+}
+
+.edit-input {
+	width: 100%;
+	height: 80rpx;
+	padding: 0 20rpx;
+	border: 2rpx solid var(--border-color);
+	border-radius: 8rpx;
+	font-size: 28rpx;
+	background-color: #fff;
+}
+
+.modal-footer {
+	display: flex;
+	gap: 20rpx;
+	padding: 30rpx;
+	border-top: 2rpx solid var(--border-color);
+}
+
+.btn {
+	flex: 1;
+	height: 80rpx;
+	border: none;
+	border-radius: 8rpx;
+	font-size: 28rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.btn-outline {
+	background-color: #fff;
+	color: var(--text-color);
+	border: 2rpx solid var(--border-color);
+}
+
+.btn-primary {
+	background-color: var(--primary-color);
+	color: #fff;
 }
 </style>
