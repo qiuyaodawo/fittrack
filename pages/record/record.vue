@@ -53,30 +53,42 @@
 					<!-- 组数设置 -->
 					<view class="sets-container">
 						<view class="sets-header">
-							<text class="sets-title">组数设置</text>
-							<button class="btn-sm btn-outline" @tap="addSet(index)">添加一组</button>
+							<view class="sets-title-group">
+								<text class="sets-title">组数设置</text>
+								<view class="sets-selector">
+									<button class="sets-btn decrease" @tap="decreaseSets(index)" :disabled="getSetCountValue(index) <= 1">
+										<text class="btn-icon">−</text>
+									</button>
+									<input 
+										type="number" 
+										class="sets-input" 
+										v-model="setCountInputs[index]" 
+										@input="validateSetCountInput(index)"
+										@blur="validateSetCountInput(index)"
+										placeholder="组数"
+										min="1"
+										max="99"
+									/>
+									<text class="sets-unit">组</text>
+									<button class="sets-btn increase" @tap="increaseSets(index)" :disabled="getSetCountValue(index) >= 99">
+										<text class="btn-icon">+</text>
+									</button>
+								</view>
+							</view>
 						</view>
 						
-						<view class="sets-list">
-							<view class="set-item" v-for="(set, setIndex) in exercise.sets" :key="setIndex">
-								<view class="set-label">第{{setIndex + 1}}组</view>
-								<view class="set-inputs">
-									<view class="input-group">
-										<text class="input-label">重量(kg)</text>
-										<input type="digit" class="input-sm" v-model="set.weight" placeholder="重量" />
-									</view>
-									<view class="input-group">
-										<text class="input-label">次数</text>
-										<input type="number" class="input-sm" v-model="set.reps" placeholder="次数" />
-									</view>
-									<view class="input-group">
-										<text class="input-label">间隔(秒)</text>
-										<input type="number" class="input-sm" v-model="set.rest" placeholder="间隔" />
-									</view>
-									<view class="set-actions">
-										<text class="remove-set-btn" @tap="removeSet(index, setIndex)" v-if="exercise.sets.length > 1">删除</text>
-									</view>
-								</view>
+						<view class="sets-config">
+							<view class="config-item">
+								<text class="config-label">重量(kg)</text>
+								<input type="digit" class="input-sm" v-model="exercise.weight" placeholder="重量" />
+							</view>
+							<view class="config-item">
+								<text class="config-label">次数</text>
+								<input type="number" class="input-sm" v-model="exercise.reps" placeholder="次数" />
+							</view>
+							<view class="config-item">
+								<text class="config-label">间隔(秒)</text>
+								<input type="number" class="input-sm" v-model="exercise.rest" placeholder="间隔" />
 							</view>
 						</view>
 					</view>
@@ -164,6 +176,9 @@ export default {
 			
 			// 选中的动作列表
 			selectedExercises: [],
+			
+			// 组数输入控制
+			setCountInputs: {}, // 存储每个动作的组数输入值
 			
 			// 弹窗控制
 			showExerciseModal: false,
@@ -531,17 +546,19 @@ export default {
 				name: exercise.name,
 				description: exercise.description,
 				category: exercise.category,
-				sets: [
-					{
-						weight: '',
-						reps: '',
-						rest: '90'
-					}
-				],
+				setsCount: 3, // 默认3组
+				weight: '',
+				reps: '',
+				rest: '90',
 				notes: ''
 			};
 			
 			this.selectedExercises.push(newExercise);
+			
+			// 初始化该动作的组数输入框
+			const exerciseIndex = this.selectedExercises.length - 1;
+			this.$set(this.setCountInputs, exerciseIndex, '3');
+			
 			this.closeExerciseModal();
 			
 			uni.showToast({
@@ -551,20 +568,57 @@ export default {
 		},
 		
 		// 组数管理方法
-		addSet(exerciseIndex) {
-			const lastSet = this.selectedExercises[exerciseIndex].sets[this.selectedExercises[exerciseIndex].sets.length - 1];
-			const newSet = {
-				weight: lastSet.weight,
-				reps: lastSet.reps,
-				rest: lastSet.rest
-			};
-			this.selectedExercises[exerciseIndex].sets.push(newSet);
-		},
-		removeSet(exerciseIndex, setIndex) {
-			if (this.selectedExercises[exerciseIndex].sets.length > 1) {
-				this.selectedExercises[exerciseIndex].sets.splice(setIndex, 1);
+		
+		// 验证组数输入
+		validateSetCountInput(exerciseIndex) {
+			let value = this.setCountInputs[exerciseIndex];
+			if (value !== undefined && value !== null) {
+				// 只允许数字
+				value = value.toString().replace(/[^\d]/g, '');
+				// 限制在1-99之间
+				if (value !== '') {
+					const num = parseInt(value);
+					if (num < 1) {
+						value = '1';
+					} else if (num > 99) {
+						value = '99';
+					}
+					
+					// 更新动作的组数
+					const exercise = this.selectedExercises[exerciseIndex];
+					exercise.setsCount = parseInt(value);
+				}
+				this.$set(this.setCountInputs, exerciseIndex, value);
 			}
 		},
+		
+		// 获取组数输入值
+		getSetCountValue(exerciseIndex) {
+			const exercise = this.selectedExercises[exerciseIndex];
+			return exercise ? exercise.setsCount : 1;
+		},
+		
+		// 减少组数
+		decreaseSets(exerciseIndex) {
+			const exercise = this.selectedExercises[exerciseIndex];
+			if (exercise.setsCount > 1) {
+				exercise.setsCount--;
+				// 更新输入框显示
+				this.$set(this.setCountInputs, exerciseIndex, exercise.setsCount.toString());
+			}
+		},
+		
+		// 增加组数
+		increaseSets(exerciseIndex) {
+			const exercise = this.selectedExercises[exerciseIndex];
+			if (exercise.setsCount < 99) {
+				exercise.setsCount++;
+				// 更新输入框显示
+				this.$set(this.setCountInputs, exerciseIndex, exercise.setsCount.toString());
+			}
+		},
+		
+
 		
 		// 动作编辑和删除
 		editExercise(index) {
@@ -580,6 +634,19 @@ export default {
 				success: (res) => {
 					if (res.confirm) {
 						this.selectedExercises.splice(index, 1);
+						
+						// 清理对应的组数输入框数据，并重新整理索引
+						const newSetCountInputs = {};
+						Object.keys(this.setCountInputs).forEach(key => {
+							const keyIndex = parseInt(key);
+							if (keyIndex < index) {
+								newSetCountInputs[keyIndex] = this.setCountInputs[key];
+							} else if (keyIndex > index) {
+								newSetCountInputs[keyIndex - 1] = this.setCountInputs[key];
+							}
+						});
+						this.setCountInputs = newSetCountInputs;
+						
 						uni.showToast({
 							title: '动作已删除',
 							icon: 'success'
@@ -607,19 +674,17 @@ export default {
 				return;
 			}
 			
-			// 验证每个动作的组数数据
-			let hasInvalidSet = false;
+			// 验证每个动作的数据
+			let hasInvalidData = false;
 			this.selectedExercises.forEach(exercise => {
-				exercise.sets.forEach(set => {
-					if (!set.weight || !set.reps) {
-						hasInvalidSet = true;
-					}
-				});
+				if (!exercise.weight || !exercise.reps) {
+					hasInvalidData = true;
+				}
 			});
 			
-			if (hasInvalidSet) {
+			if (hasInvalidData) {
 				uni.showToast({
-					title: '请完善所有组数的重量和次数',
+					title: '请完善所有动作的重量和次数',
 					icon: 'none'
 				});
 				return;
@@ -631,18 +696,35 @@ export default {
 			});
 			
 			try {
-							// 构造训练记录数据
-			const now = new Date();
-			const workoutData = {
-				id: Date.now(),
-				name: this.workoutInfo.name,
-				type: this.workoutTypes[this.workoutTypeIndex],
-				date: this.workoutInfo.date,
-				startTime: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'),
-				exercises: this.selectedExercises,
-				status: '已完成',
-				duration: this.calculateDuration()
-			};
+				// 构造训练记录数据，将新格式转换为标准格式
+				const now = new Date();
+				const convertedExercises = this.selectedExercises.map(exercise => {
+					// 根据组数创建sets数组
+					const sets = [];
+					for (let i = 0; i < exercise.setsCount; i++) {
+						sets.push({
+							weight: exercise.weight,
+							reps: exercise.reps,
+							rest: exercise.rest
+						});
+					}
+					
+					return {
+						...exercise,
+						sets: sets
+					};
+				});
+				
+				const workoutData = {
+					id: Date.now(),
+					name: this.workoutInfo.name,
+					type: this.workoutTypes[this.workoutTypeIndex],
+					date: this.workoutInfo.date,
+					startTime: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'),
+					exercises: convertedExercises,
+					status: '已完成',
+					duration: this.calculateDuration()
+				};
 				
 				// 保存到本地存储
 				let workoutHistory = uni.getStorageSync('workoutHistory') || [];
@@ -691,14 +773,13 @@ export default {
 		calculateDuration() {
 			let totalTime = 0;
 			this.selectedExercises.forEach(exercise => {
-				exercise.sets.forEach((set, index) => {
-					// 每组假设需要30秒执行时间
-					totalTime += 30;
-					// 加上组间休息时间（除了最后一组）
-					if (index < exercise.sets.length - 1) {
-						totalTime += parseInt(set.rest) || 90;
-					}
-				});
+				const setsCount = exercise.setsCount || 1;
+				const restTime = parseInt(exercise.rest) || 90;
+				
+				// 每组假设需要30秒执行时间
+				totalTime += setsCount * 30;
+				// 加上组间休息时间（组数-1次休息）
+				totalTime += (setsCount - 1) * restTime;
 				// 动作间休息2分钟
 				totalTime += 120;
 			});
@@ -953,10 +1034,112 @@ export default {
 }
 
 .sets-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
 	margin-bottom: 20rpx;
+}
+
+.sets-title-group {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+}
+
+.sets-selector {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	background: #f8f9fa;
+	padding: 12rpx;
+	border-radius: 12rpx;
+	border: 2rpx solid #e9ecef;
+}
+
+.sets-btn {
+	width: 60rpx;
+	height: 60rpx;
+	border-radius: 50%;
+	border: none;
+	font-size: 28rpx;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s;
+	box-shadow: 0 3rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.sets-btn.decrease {
+	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+	color: white;
+}
+
+.sets-btn.increase {
+	background: linear-gradient(135deg, #51cf66, #40c057);
+	color: white;
+}
+
+.sets-btn:hover {
+	transform: scale(1.05);
+	box-shadow: 0 5rpx 12rpx rgba(0, 0, 0, 0.15);
+}
+
+.sets-btn:disabled {
+	background: #e9ecef !important;
+	color: #adb5bd !important;
+	transform: none !important;
+	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05) !important;
+	cursor: not-allowed;
+}
+
+.btn-icon {
+	font-size: 24rpx;
+	font-weight: bold;
+}
+
+.sets-input {
+	width: 100rpx;
+	height: 60rpx;
+	text-align: center;
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #333;
+	background: white;
+	border: 2rpx solid #dee2e6;
+	border-radius: 8rpx;
+	box-shadow: inset 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+	transition: all 0.3s;
+}
+
+.sets-input:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 3rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+}
+
+.sets-unit {
+	font-size: 24rpx;
+	font-weight: 500;
+	color: #666;
+	min-width: 30rpx;
+}
+
+.sets-config {
+	display: flex;
+	gap: 20rpx;
+	flex-wrap: wrap;
+}
+
+.config-item {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 180rpx;
+}
+
+.config-label {
+	font-size: 24rpx;
+	color: var(--text-color-light);
+	margin-bottom: 8rpx;
 }
 
 .sets-title {
@@ -1082,7 +1265,8 @@ export default {
 
 .large-modal {
 	width: 95%;
-	max-height: 85%;
+	max-height: 95%;
+	height: 95%;
 }
 
 .modal-header {
@@ -1110,7 +1294,7 @@ export default {
 
 .modal-body {
 	padding: 30rpx;
-	max-height: 600rpx;
+	max-height: calc(95vh - 200rpx);
 	overflow-y: auto;
 }
 
@@ -1145,7 +1329,7 @@ export default {
 }
 
 .exercise-options {
-	max-height: 400rpx;
+	max-height: calc(95vh - 400rpx);
 	overflow-y: auto;
 }
 
