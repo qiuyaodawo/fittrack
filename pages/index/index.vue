@@ -14,15 +14,20 @@
 			</view>
 		</view>
 		
-		<view class="container">
-			<!-- 欢迎区域 -->
+		<view class="container">			<!-- 欢迎区域 -->
 			<view class="card welcome-card">
 				<view class="flex-row justify-between align-center">
 					<view>
 						<text class="section-title">欢迎回来, {{userInfo.name}}!</text>
 					</view>
-					<view class="user-avatar">
-						<image src="/static/images/avatar.png" mode="aspectFill"></image>
+					<view class="header-actions">
+						<view class="sync-status" @tap="handleSync">
+							<text class="sync-icon">{{ syncStatus.icon }}</text>
+							<text class="sync-text">{{ syncStatus.text }}</text>
+						</view>
+						<view class="user-avatar">
+							<image src="/static/images/avatar.png" mode="aspectFill"></image>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -78,6 +83,8 @@
 </template>
 
 <script>
+import localDataService from '@/utils/localDataService.js';
+
 export default {
 	data() {
 		return {
@@ -91,6 +98,11 @@ export default {
 			trainingInfo: {
 				thisWeek: '0 次训练',
 				weeklyProgress: '开始您的健身之旅'
+			},
+			syncStatus: {
+				icon: '🔄',
+				text: '点击同步',
+				syncing: false
 			},
 			recommendedPlans: [
 				{
@@ -124,6 +136,9 @@ export default {
 			this.userInfo = userInfoStorage;
 		}
 		
+		// 更新同步状态
+		this.updateSyncStatus();
+		
 		// 加载体重信息
 		this.loadWeightInfo();
 		
@@ -140,6 +155,83 @@ export default {
 		}
 	},
 	methods: {
+		// 处理数据同步
+		async handleSync() {
+			if (this.syncStatus.syncing) return;
+			
+			if (!localDataService.isLoggedIn) {
+				uni.showModal({
+					title: '提示',
+					content: '需要登录才能同步数据，是否前往登录？',
+					success: (res) => {
+						if (res.confirm) {
+							uni.navigateTo({
+								url: '/pages/login/login'
+							});
+						}
+					}
+				});
+				return;
+			}
+			
+			this.syncStatus.syncing = true;
+			this.syncStatus.icon = '⏳';
+			this.syncStatus.text = '同步中...';
+			
+			try {
+				const result = await localDataService.autoSync();
+				
+				if (result.success) {
+					this.syncStatus.icon = '✅';
+					this.syncStatus.text = '同步成功';
+					
+					// 重新加载数据
+					this.loadWeightInfo();
+					this.loadTrainingInfo();
+					
+					uni.showToast({
+						title: '数据同步成功',
+						icon: 'success'
+					});
+				} else {
+					this.syncStatus.icon = '❌';
+					this.syncStatus.text = '同步失败';
+					
+					uni.showToast({
+						title: result.message || '数据同步失败',
+						icon: 'none'
+					});
+				}
+			} catch (error) {
+				this.syncStatus.icon = '❌';
+				this.syncStatus.text = '连接失败';
+				
+				uni.showToast({
+					title: '请检查服务器是否启动',
+					icon: 'none'
+				});
+			}
+			
+			this.syncStatus.syncing = false;
+			
+			// 3秒后恢复默认状态
+			setTimeout(() => {
+				this.syncStatus.icon = '🔄';
+				this.syncStatus.text = '点击同步';
+			}, 3000);
+		},
+		
+		// 更新同步状态
+		updateSyncStatus() {
+			if (localDataService.isLoggedIn) {
+				this.syncStatus.icon = '🔄';
+				this.syncStatus.text = '点击同步';
+			} else {
+				this.syncStatus.icon = '🔒';
+				this.syncStatus.text = '需要登录';
+			}
+		},
+		
 		navigateTo(page) {
 			uni.reLaunch({
 				url: `/pages/${page}/${page}`
@@ -337,6 +429,40 @@ export default {
 	height: 100%;
 }
 
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+}
+
+.sync-status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 10rpx;
+	border-radius: 12rpx;
+	background-color: rgba(59, 130, 246, 0.1);
+	min-width: 100rpx;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.sync-status:active {
+	background-color: rgba(59, 130, 246, 0.2);
+	transform: scale(0.95);
+}
+
+.sync-icon {
+	font-size: 32rpx;
+	margin-bottom: 4rpx;
+}
+
+.sync-text {
+	font-size: 20rpx;
+	color: #3b82f6;
+	text-align: center;
+}
+
 .stats-cards {
 	display: flex;
 	justify-content: space-between;
@@ -514,4 +640,4 @@ export default {
 		font-size: 24rpx;
 	}
 }
-</style> 
+</style>

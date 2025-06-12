@@ -8,9 +8,12 @@
 				<view class="nav-item active">进度追踪</view>
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
-			</view>
-			<view class="nav-actions">
-				<!-- 右侧占位符，保持布局平衡 -->
+			</view>			<view class="nav-actions">
+				<!-- 同步状态指示器 -->
+				<view class="sync-status" @tap="syncData">
+					<text class="sync-icon">{{syncStatus.icon}}</text>
+					<text class="sync-text">{{syncStatus.text}}</text>
+				</view>
 			</view>
 		</view>
 		
@@ -142,6 +145,8 @@
 </template>
 
 <script>
+import cloudDataService from '@/utils/cloudDataService.js';
+
 export default {
 	data() {
 		return {
@@ -152,12 +157,18 @@ export default {
 			
 			workoutLogs: [],
 			personalRecords: [],
-			strengthProgress: [],
-			trainingStats: {
+			strengthProgress: [],			trainingStats: {
 				thisWeek: 0,
 				thisMonth: 0,
 				total: 0,
 				avgDuration: '0 分钟'
+			},
+			
+			// 同步状态
+			syncStatus: {
+				icon: '🔄',
+				text: '点击同步',
+				syncing: false
 			},
 			
 			// 动作名称映射，用于统一不同写法的动作名
@@ -209,13 +220,15 @@ export default {
 				'仰卧起坐': '卷腹'
 			}
 		}
-	},
-	onShow() {
+	},	onShow() {
 		// 页面显示时加载训练记录和更新统计数据
 		this.loadWorkoutHistory();
 		this.updatePersonalRecordsWithManualData();
 		this.updateStrengthProgress();
 		this.updateTrainingStats();
+		
+		// 更新同步状态
+		this.updateSyncStatus();
 	},
 	methods: {
 		navigateTo(page) {
@@ -746,14 +759,97 @@ export default {
 							total: 0,
 							avgDuration: '0 分钟'
 						};
-						
-						uni.showToast({
+								uni.showToast({
 							title: '数据已清空',
 							icon: 'success'
 						});
 					}
 				}
 			});
+		},
+		
+		// 数据同步方法
+		async syncData() {
+			if (this.syncStatus.syncing) return;
+			
+			if (!cloudDataService.isLoggedIn) {
+				uni.showModal({
+					title: '提示',
+					content: '需要登录云端账号才能同步数据，是否前往登录？',
+					success: (res) => {
+						if (res.confirm) {
+							uni.navigateTo({
+								url: '/pages/login/login'
+							});
+						}
+					}
+				});
+				return;
+			}
+			
+			this.syncStatus.syncing = true;
+			this.syncStatus.icon = '⏳';
+			this.syncStatus.text = '同步中...';
+			
+			try {
+				const result = await cloudDataService.autoSync();
+				
+				if (result.success) {
+					this.syncStatus.icon = '✅';
+					this.syncStatus.text = '同步成功';
+					
+					// 重新加载数据
+					this.loadWorkoutHistory();
+					this.updatePersonalRecordsWithManualData();
+					this.updateStrengthProgress();
+					this.updateTrainingStats();
+					
+					uni.showToast({
+						title: '数据同步成功',
+						icon: 'success'
+					});
+				} else {
+					this.syncStatus.icon = '❌';
+					this.syncStatus.text = '同步失败';
+					
+					uni.showToast({
+						title: result.message || '同步失败',
+						icon: 'none'
+					});
+				}
+			} catch (error) {
+				this.syncStatus.icon = '❌';
+				this.syncStatus.text = '同步失败';
+				
+				uni.showToast({
+					title: '网络错误',
+					icon: 'none'
+				});
+			}
+			
+			this.syncStatus.syncing = false;
+			
+			// 3秒后恢复初始状态
+			setTimeout(() => {
+				this.updateSyncStatus();
+			}, 3000);
+		},
+		
+		// 更新同步状态
+		updateSyncStatus() {
+			if (cloudDataService.isLoggedIn) {
+				this.syncStatus = {
+					icon: '☁️',
+					text: '云端已连接',
+					syncing: false
+				};
+			} else {
+				this.syncStatus = {
+					icon: '📱',
+					text: '本地模式',
+					syncing: false
+				};
+			}
 		}
 	}
 }
@@ -809,6 +905,37 @@ export default {
 	display: flex;
 	align-items: center;
 	min-width: 120rpx; /* 确保右侧有足够的占位空间 */
+}
+
+// 同步状态样式
+.sync-status {
+	display: flex;
+	align-items: center;
+	gap: 10rpx;
+	padding: 8rpx 16rpx;
+	border-radius: 20rpx;
+	background-color: rgba(59, 130, 246, 0.1);
+	cursor: pointer;
+	transition: all 0.3s ease;
+	
+	&:hover {
+		background-color: rgba(59, 130, 246, 0.2);
+	}
+	
+	&:active {
+		transform: scale(0.95);
+	}
+}
+
+.sync-icon {
+	font-size: 24rpx;
+	line-height: 1;
+}
+
+.sync-text {
+	font-size: 24rpx;
+	color: #333;
+	line-height: 1;
 }
 
 .content-container {

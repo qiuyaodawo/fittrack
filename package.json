@@ -1,0 +1,27 @@
+{
+  "name": "fittrack",
+  "version": "1.0.0",
+  "description": "智能健身追踪应用",
+  "main": "main.js",
+  "scripts": {
+    "dev": "echo '请使用HBuilderX运行项目'",
+    "build": "echo '请使用HBuilderX发行项目'",
+    "serve": "echo '请使用HBuilderX运行到浏览器'"
+  },
+  "keywords": [
+    "fitness",
+    "uniapp",
+    "vue3",
+    "unicloud"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@dcloudio/uni-app": "latest",
+    "@dcloudio/uni-components": "latest"
+  },
+  "devDependencies": {},
+  "uni-app": {
+    "scripts": {}
+  }
+}

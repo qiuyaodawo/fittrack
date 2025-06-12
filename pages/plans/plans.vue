@@ -10,7 +10,10 @@
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
 			<view class="nav-actions">
-				<!-- 右侧占位符，保持布局平衡 -->
+				<view class="sync-status" @tap="syncData">
+					<text class="sync-icon">⚡</text>
+					<text class="sync-text">{{ syncStatus.text }}</text>
+				</view>
 			</view>
 		</view>
 		
@@ -159,7 +162,7 @@
 					<!-- 计划基本信息 -->
 					<view class="form-group">
 						<text class="form-label">计划名称</text>
-						<input v-model="customPlan.title" placeholder="请输入计划名称" class="form-input" :value="customPlan.title" @input="handleTitleInput" />
+						<input v-model="customPlan.title" placeholder="请输入计划名称" class="form-input" />
 					</view>
 					
 					<!-- 周数控制 -->
@@ -198,7 +201,7 @@
 								v-for="(day, index) in weekDays" 
 								:key="index"
 								@tap="editDay(day, customPlan.currentWeek)"
-								:class="{'has-plan': getDayPlan(customPlan.currentWeek, day), 'rest-day': getDayPlan(customPlan.currentWeek, day)?.restDay}">
+								:class="{'has-plan': getDayPlan(customPlan.currentWeek, day), 'rest-day': getDayPlan(customPlan.currentWeek, day) && getDayPlan(customPlan.currentWeek, day).restDay}">
 								
 								<text class="day-name">{{day}}</text>
 								<view class="day-status" v-if="getDayPlan(customPlan.currentWeek, day)">
@@ -361,6 +364,8 @@
 </template>
 
 <script>
+import cloudDataService from '@/utils/cloudDataService.js';
+
 export default {
 	data() {
 		return {
@@ -425,12 +430,18 @@ export default {
 				rest: '60-90秒',
 				notes: ''
 			},
-			
-			// 自定义选择器显示状态
+					// 自定义选择器显示状态
 			showGoalOptions: false,
 			showDaysOptions: false,
 			showLevelOptions: false,
 			showDurationOptions: false,
+			
+			// 云同步状态
+			syncStatus: {
+				icon: 'sync-connected',
+				text: '已连接',
+				syncing: false
+			},
 			
 			// 可选择的动作库
 			exerciseLibrary: {
@@ -473,10 +484,11 @@ export default {
 				}
 			]
 		}
-	},
-	onShow() {
+	},	onShow() {
 		// 页面显示时加载我的计划
 		this.loadMyPlans();
+		// 更新同步状态
+		this.updateSyncStatus();
 	},
 	methods: {
 		navigateTo(page) {
@@ -816,9 +828,8 @@ export default {
 				icon: 'success'
 			});
 		},
-		
-		// 保存自定义计划
-		saveCustomPlan() {
+				// 保存自定义计划
+		async saveCustomPlan() {
 			if (!this.customPlan.title.trim()) {
 				uni.showToast({
 					title: '请输入计划名称',
@@ -844,22 +855,42 @@ export default {
 				totalWeeks: this.customPlan.weeks
 			};
 			
-			// 保存到本地存储
-			const savedPlans = uni.getStorageSync('myPlans') || [];
-			savedPlans.unshift(planData);
-			uni.setStorageSync('myPlans', savedPlans);
-			
-			// 更新显示的计划列表
-			this.loadMyPlans();
-			
-			// 关闭弹窗
-			this.closeModal();
-			
-			uni.showToast({
-				title: '计划创建成功',
-				icon: 'success',
-				duration: 2000
-			});
+			try {
+				// 保存到本地存储
+				const savedPlans = uni.getStorageSync('myPlans') || [];
+				savedPlans.unshift(planData);
+				uni.setStorageSync('myPlans', savedPlans);
+				
+				// 尝试同步到云端
+				const userInfo = uni.getStorageSync('userInfo');
+				if (userInfo && userInfo.userId) {
+					try {
+						await cloudDataService.savePlanToCloud(planData);
+						console.log('计划已同步至云端');
+					} catch (error) {
+						console.error('云端同步失败:', error);
+						// 云端同步失败不影响本地保存
+					}
+				}
+				
+				// 更新显示的计划列表
+				this.loadMyPlans();
+				
+				// 关闭弹窗
+				this.closeModal();
+				
+				uni.showToast({
+					title: '计划创建成功',
+					icon: 'success',
+					duration: 2000
+				});
+			} catch (error) {
+				console.error('保存计划失败:', error);
+				uni.showToast({
+					title: '保存失败，请重试',
+					icon: 'none'
+				});
+			}
 		},
 		onNewPlanGoalChange(e) {
 			console.log('目标改变:', e.detail.value);
@@ -1130,6 +1161,34 @@ export default {
 							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '哑铃侧平举 4组 x 12-15次', '后束飞鸟 3组 x 15次', '直立划船 3组 x 12次'] },
 							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] },
 							{ day: '周六', focus: '腿部 (后链)', exercises: ['罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '臀桥 3组 x 15-20次', '小腿提踵 4组 x 15-20次'] }
+						]
+					},
+					高级: {
+						3: [
+							{ day: '周一', focus: '推力主导', exercises: ['杠铃卧推 5组 x 6-8次', '肩推 4组 x 8次', '倾斜卧推 4组 x 8-10次', '三头肌训练 4组'] },
+							{ day: '周三', focus: '拉力主导', exercises: ['硬拉 4组 x 6次', '引体向上 4组 x 8次', '杠铃划船 4组 x 8次', '二头肌训练 4组'] },
+							{ day: '周五', focus: '下肢主导', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 3组 x 8次', '罗马尼亚硬拉 4组 x 8次', '腿部辅助训练 3组'] }
+						],
+						4: [
+							{ day: '周一', focus: '胸肌推力', exercises: ['杠铃卧推 5组 x 6-8次', '倾斜杠铃卧推 4组 x 8-10次', '双杠臂屈伸 4组 x 8-12次', '三头肌训练 3组'] },
+							{ day: '周二', focus: '背部拉力', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '二头肌训练 3组'] },
+							{ day: '周四', focus: '下肢力量', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '腿部辅助 3组'] },
+							{ day: '周六', focus: '肩部推力', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '侧平举 3组 x 12-15次'] }
+						],
+						5: [
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
+							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '保加利亚深蹲 3组 x 10-12次'] },
+							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
+							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] }
+						],
+						6: [
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
+							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '腿屈伸 3组 x 12-15次'] },
+							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
+							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] },
+							{ day: '周六', focus: '腿部 (后链)', exercises: ['杠铃硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '小腿提踵 4组 x 15-20次'] }
 						]
 					},
 					高级: {
@@ -1599,8 +1658,7 @@ export default {
 			}
 			
 			return plan;
-		},
-		savePlan() {
+		},		async savePlan() {
 			if (!this.previewPlan || this.previewPlan.length === 0) {
 				uni.showToast({
 					title: '请先生成计划',
@@ -1633,23 +1691,43 @@ export default {
 				exercises: [...this.previewPlan]
 			};
 			
-			// 保存到本地存储
-			const savedPlans = uni.getStorageSync('myPlans') || [];
-			savedPlans.unshift(newPlan);
-			uni.setStorageSync('myPlans', savedPlans);
-			
-			// 更新显示的计划列表
-			this.loadMyPlans();
-			
-			// 重置预览状态
-			this.showPreview = false;
-			this.previewPlan = [];
-			
-			uni.showToast({
-				title: '计划已保存到我的计划',
-				icon: 'success',
-				duration: 2000
-			});
+			try {
+				// 保存到本地存储
+				const savedPlans = uni.getStorageSync('myPlans') || [];
+				savedPlans.unshift(newPlan);
+				uni.setStorageSync('myPlans', savedPlans);
+				
+				// 尝试同步到云端
+				const userInfo = uni.getStorageSync('userInfo');
+				if (userInfo && userInfo.userId) {
+					try {
+						await cloudDataService.savePlanToCloud(newPlan);
+						console.log('计划已同步至云端');
+					} catch (error) {
+						console.error('云端同步失败:', error);
+						// 云端同步失败不影响本地保存
+					}
+				}
+				
+				// 更新显示的计划列表
+				this.loadMyPlans();
+				
+				// 重置预览状态
+				this.showPreview = false;
+				this.previewPlan = [];
+				
+				uni.showToast({
+					title: '计划已保存到我的计划',
+					icon: 'success',
+					duration: 2000
+				});
+			} catch (error) {
+				console.error('保存计划失败:', error);
+				uni.showToast({
+					title: '保存失败，请重试',
+					icon: 'none'
+				});
+			}
 		},
 		viewPlanDetails(plan) {
 			// 显示计划详情
@@ -1741,8 +1819,7 @@ export default {
 				this.myPlans = savedPlans;
 			}
 		},
-		
-		// 删除计划
+				// 删除计划
 		deletePlan(plan, index) {
 			uni.showModal({
 				title: '确认删除',
@@ -1763,6 +1840,117 @@ export default {
 						});
 					}
 				}
+			});
+		},
+		
+		// 云同步相关方法
+		async syncData() {
+			if (this.syncStatus.syncing) {
+				return;
+			}
+			
+			this.syncStatus.syncing = true;
+			this.syncStatus.icon = 'sync-syncing';
+			this.syncStatus.text = '同步中...';
+			
+			try {
+				// 检查用户登录状态
+				const userInfo = uni.getStorageSync('userInfo');
+				if (!userInfo || !userInfo.userId) {
+					uni.showModal({
+						title: '需要登录',
+						content: '云同步功能需要登录账户，是否前往登录？',
+						success: (res) => {
+							if (res.confirm) {
+								uni.reLaunch({
+									url: '/pages/login/login'
+								});
+							}
+						}
+					});
+					this.updateSyncStatus();
+					return;
+				}
+				
+				// 获取本地数据
+				const localPlans = uni.getStorageSync('myPlans') || [];
+				
+				// 上传到云端
+				if (localPlans.length > 0) {
+					await cloudDataService.syncPlansToCloud(localPlans);
+				}
+				
+				// 从云端获取数据
+				const cloudPlans = await cloudDataService.getPlansFromCloud();
+				
+				// 合并数据
+				const mergedPlans = this.mergePlansData(localPlans, cloudPlans);
+				
+				// 保存合并后的数据
+				uni.setStorageSync('myPlans', mergedPlans);
+				this.myPlans = mergedPlans;
+				
+				this.syncStatus.icon = 'sync-connected';
+				this.syncStatus.text = '同步完成';
+				
+				uni.showToast({
+					title: '数据同步成功',
+					icon: 'success'
+				});
+				
+				// 3秒后恢复正常状态
+				setTimeout(() => {
+					this.updateSyncStatus();
+				}, 3000);
+				
+			} catch (error) {
+				console.error('数据同步失败:', error);
+				this.syncStatus.icon = 'sync-error';
+				this.syncStatus.text = '同步失败';
+				
+				uni.showToast({
+					title: '同步失败，请稍后重试',
+					icon: 'none'
+				});
+				
+				// 3秒后恢复状态
+				setTimeout(() => {
+					this.updateSyncStatus();
+				}, 3000);
+			} finally {
+				this.syncStatus.syncing = false;
+			}
+		},
+		
+		// 更新同步状态
+		updateSyncStatus() {
+			const userInfo = uni.getStorageSync('userInfo');
+			if (userInfo && userInfo.userId) {
+				this.syncStatus.icon = 'sync-connected';
+				this.syncStatus.text = '已连接';
+			} else {
+				this.syncStatus.icon = 'sync-disconnected';
+				this.syncStatus.text = '未登录';
+			}
+		},
+		
+		// 合并计划数据
+		mergePlansData(localPlans, cloudPlans) {
+			const merged = [...localPlans];
+			const localIds = new Set(localPlans.map(plan => plan.id));
+			
+			// 添加云端独有的数据
+			cloudPlans.forEach(cloudPlan => {
+				if (!localIds.has(cloudPlan.id)) {
+					merged.push(cloudPlan);
+				}
+			});
+			
+			// 按创建时间排序
+			return merged.sort((a, b) => {
+				const timeA = new Date(a.createdDate || 0).getTime();
+				const timeB = new Date(b.createdDate || 0).getTime();
+				return timeB - timeA;
 			});
 		}
 	}
@@ -2349,7 +2537,7 @@ export default {
 
 .day-card {
 	background: white;
-	border-radius: 16rpx;
+	border-radius: 12rpx;
 	padding: 24rpx;
 	border: 2rpx solid #e9ecef;
 	transition: all 0.3s;
@@ -2360,464 +2548,6 @@ export default {
 	border-color: var(--primary-color);
 	transform: translateY(-4rpx);
 	box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.1);
-}
-
-.day-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 16rpx;
-}
-
-.day-name {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #333;
-}
-
-.day-status {
-	font-size: 24rpx;
-	padding: 8rpx 12rpx;
-	border-radius: 12rpx;
-	background: var(--primary-color);
-	color: white;
-}
-
-.day-status.empty {
-	background: #f8f9fa;
-	color: #666;
-}
-
-.day-preview {
-	margin-top: 16rpx;
-}
-
-.exercise-preview {
-	display: block;
-	font-size: 24rpx;
-	color: #666;
-	margin-bottom: 8rpx;
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-}
-
-.more-exercises {
-	font-size: 22rpx;
-	color: #999;
-	font-style: italic;
-}
-
-/* 日编辑器样式 */
-.day-editor-modal {
-	width: 90%;
-	max-width: 800rpx;
-	max-height: 80vh;
-	overflow-y: auto;
-}
-
-.rest-day-option {
-	margin-bottom: 30rpx;
-	padding: 24rpx;
-	background: #f8f9fa;
-	border-radius: 12rpx;
-}
-
-.checkbox-label {
-	display: flex;
-	align-items: center;
-	gap: 16rpx;
-	font-size: 30rpx;
-	color: #333;
-}
-
-.exercises-section {
-	margin-bottom: 40rpx;
-}
-
-.section-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 20rpx;
-}
-
-.section-title {
-	font-size: 32rpx;
-	font-weight: 600;
-	color: #333;
-}
-
-.btn.btn-small {
-	padding: 12rpx 20rpx;
-	font-size: 24rpx;
-	height: auto;
-}
-
-.exercise-list .exercise-item {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 24rpx;
-	background: white;
-	border-radius: 12rpx;
-	border: 2rpx solid #e9ecef;
-	margin-bottom: 16rpx;
-}
-
-.exercise-info {
-	flex: 1;
-}
-
-.exercise-name {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #333;
-	margin-bottom: 8rpx;
-	display: block;
-}
-
-.exercise-details {
-	font-size: 24rpx;
-	color: #666;
-	margin-right: 16rpx;
-}
-
-.exercise-weight {
-	font-size: 24rpx;
-	color: var(--primary-color);
-	font-weight: 500;
-}
-
-.exercise-actions {
-	display: flex;
-	gap: 12rpx;
-}
-
-.btn.btn-danger {
-	background: #dc3545;
-	color: white;
-}
-
-.empty-state {
-	text-align: center;
-	padding: 60rpx 20rpx;
-	color: #999;
-	font-size: 28rpx;
-}
-
-.notes-section {
-	margin-top: 30rpx;
-}
-
-.notes-input {
-	width: 100%;
-	min-height: 120rpx;
-	padding: 20rpx;
-	border: 2rpx solid #e9ecef;
-	border-radius: 12rpx;
-	font-size: 28rpx;
-	margin-top: 16rpx;
-	resize: none;
-}
-
-/* 动作选择器样式 */
-.exercise-selector-modal {
-	width: 90%;
-	max-width: 900rpx;
-	max-height: 80vh;
-	overflow-y: auto;
-}
-
-.exercise-categories {
-	margin-bottom: 30rpx;
-}
-
-.category {
-	margin-bottom: 30rpx;
-}
-
-.category-name {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #333;
-	margin-bottom: 16rpx;
-	display: block;
-}
-
-.exercise-options {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12rpx;
-}
-
-.exercise-option {
-	padding: 16rpx 24rpx;
-	background: #f8f9fa;
-	border-radius: 20rpx;
-	font-size: 26rpx;
-	color: #666;
-	border: 2rpx solid transparent;
-	transition: all 0.3s;
-}
-
-.exercise-option.selected {
-	background: var(--primary-color);
-	color: white;
-	border-color: var(--primary-color);
-}
-
-.form-group {
-	margin-bottom: 30rpx;
-}
-
-.form-group .form-label {
-	font-size: 28rpx;
-	font-weight: 500;
-	color: #333;
-	margin-bottom: 12rpx;
-	display: block;
-}
-
-.form-input, .form-textarea {
-	width: 100%;
-	padding: 20rpx;
-	border: 2rpx solid #e9ecef;
-	border-radius: 12rpx;
-	font-size: 28rpx;
-	background: white;
-	box-sizing: border-box;
-	min-height: 80rpx;
-}
-
-.form-textarea {
-	min-height: 120rpx;
-	resize: none;
-}
-
-.close-btn {
-	font-size: 40rpx;
-	color: rgba(255, 255, 255, 0.8);
-	cursor: pointer;
-	width: 60rpx;
-	height: 60rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.1);
-	transition: all 0.3s;
-}
-
-.close-btn:hover {
-	background: rgba(255, 255, 255, 0.2);
-	color: white;
-}
-
-.btn.btn-outline {
-	background: transparent;
-	color: var(--primary-color);
-	border: 2rpx solid var(--primary-color);
-}
-
-/* 预览编辑功能样式 */
-.preview-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 30rpx;
-	border-bottom: 2rpx solid var(--border-color);
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	color: white;
-}
-
-.preview-content {
-	padding: 30rpx;
-	max-height: 500rpx;
-	overflow-y: auto;
-}
-
-/* 交互式动作列表样式 */
-.exercise-list-interactive {
-	margin-left: 20rpx;
-	margin-top: 16rpx;
-}
-
-.exercise-item-interactive {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 12rpx 16rpx;
-	margin-bottom: 8rpx;
-	background: #f8f9fa;
-	border-radius: 8rpx;
-	border: 2rpx solid transparent;
-	transition: all 0.3s;
-	cursor: pointer;
-	position: relative;
-}
-
-.exercise-item-interactive:hover {
-	background: #e9ecef;
-	border-color: var(--primary-color);
-	transform: translateX(4rpx);
-}
-
-.exercise-item-interactive .exercise-text {
-	flex: 1;
-	font-size: 26rpx;
-	color: #333;
-}
-
-.edit-hint {
-	opacity: 0;
-	transition: opacity 0.3s;
-	font-size: 20rpx;
-	color: #999;
-}
-
-.exercise-item-interactive:hover .edit-hint {
-	opacity: 1;
-}
-
-.add-exercise-btn-mini {
-	width: 48rpx;
-	height: 48rpx;
-	background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-	border: none;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin: 16rpx auto 0;
-	box-shadow: 0 4rpx 12rpx rgba(132, 250, 176, 0.3);
-	transition: all 0.3s;
-}
-
-.add-exercise-btn-mini:hover {
-	transform: scale(1.1);
-	box-shadow: 0 6rpx 16rpx rgba(132, 250, 176, 0.4);
-}
-
-.plus-icon {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: white;
-}
-
-.add-exercise-btn-mini {
-	background: white !important;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1) !important;
-}
-
-.add-exercise-btn-mini .plus-icon {
-	color: #667eea !important;
-}
-
-/* 动作编辑弹窗样式 */
-.exercise-edit-modal {
-	width: 600rpx;
-	max-width: 90vw;
-}
-
-.action-buttons {
-	margin-top: 30rpx;
-	text-align: center;
-}
-
-.btn.btn-danger {
-	background: #dc3545;
-	color: white;
-	border: 2rpx solid #dc3545;
-	padding: 16rpx 32rpx;
-	border-radius: 8rpx;
-	font-size: 26rpx;
-}
-
-
-
-.preview-footer {
-	padding: 30rpx;
-	border-top: 2rpx solid var(--border-color);
-	background: #f8f9fa;
-}
-
-/* 简洁的创建计划界面样式 */
-.week-control {
-	margin-top: 20rpx;
-}
-
-.week-selector {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 20rpx;
-}
-
-.week-btn {
-	width: 60rpx;
-	height: 60rpx;
-	border-radius: 50%;
-	background: var(--primary-color);
-	color: white;
-	border: none;
-	font-size: 24rpx;
-	font-weight: 600;
-}
-
-.week-btn:disabled {
-	background: #ddd;
-	color: #999;
-}
-
-.week-display {
-	font-size: 32rpx;
-	font-weight: 600;
-	color: #333;
-	min-width: 100rpx;
-	text-align: center;
-}
-
-.week-tabs {
-	display: flex;
-	gap: 12rpx;
-	flex-wrap: wrap;
-	margin-top: 20rpx;
-}
-
-.week-tab {
-	padding: 16rpx 24rpx;
-	background: #f8f9fa;
-	border-radius: 12rpx;
-	border: 2rpx solid #e9ecef;
-	font-size: 26rpx;
-	transition: all 0.3s;
-}
-
-.week-tab.active {
-	background: var(--primary-color);
-	color: white;
-	border-color: var(--primary-color);
-}
-
-.days-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 20rpx;
-	margin-top: 20rpx;
-}
-
-.day-card {
-	background: white;
-	border-radius: 12rpx;
-	padding: 20rpx;
-	border: 2rpx solid #e9ecef;
-	transition: all 0.3s;
-}
-
-.day-card:hover {
-	border-color: var(--primary-color);
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 
 .day-card.has-plan {
@@ -2861,4 +2591,54 @@ export default {
 	font-size: 20rpx;
 	color: #999;
 }
-</style> 
+
+/* 同步状态样式 */
+.sync-status {
+	display: flex;
+	align-items: center;
+	gap: 8rpx;
+	padding: 8rpx 16rpx;
+	background-color: rgba(255, 255, 255, 0.1);
+	border-radius: 20rpx;
+	transition: all 0.3s ease;
+	cursor: pointer;
+}
+
+.sync-status:hover {
+	background-color: rgba(255, 255, 255, 0.2);
+	transform: translateY(-2rpx);
+}
+
+.sync-icon {
+	font-size: 24rpx;
+	transition: all 0.3s ease;
+}
+
+.sync-icon.sync-connected {
+	color: #2ecc71;
+}
+
+.sync-icon.sync-disconnected {
+	color: #95a5a6;
+}
+
+.sync-icon.sync-syncing {
+	color: #f39c12;
+	animation: spin 1s linear infinite;
+}
+
+.sync-icon.sync-error {
+	color: #e74c3c;
+}
+
+.sync-text {
+	font-size: 24rpx;
+	color: #333;
+	font-weight: 500;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+</style>

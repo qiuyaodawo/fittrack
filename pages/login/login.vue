@@ -29,26 +29,36 @@
 				
 				<button class="btn btn-primary" form-type="submit">登录</button>
 			</form>
-			
-			<view class="register-link">
+					<view class="register-link">
 				<text>还没有账户? </text>
 				<text class="text-primary" @tap="goToRegister">立即注册</text>
+			</view>
+			
+			<!-- 认证模式切换 -->
+			<view class="auth-mode-switch">
+				<text class="switch-label">认证模式：</text>
+				<text class="switch-mode" @tap="toggleAuthMode">
+					{{ useCloudAuth ? '云端登录' : '本地登录' }}
+				</text>
 			</view>
 		</view>
 	</view>
 </template>
 
 <script>
+import localDataService from '@/utils/localDataService.js';
+
 export default {
 	data() {
 		return {
 			email: '',
 			password: '',
-			rememberMe: false
+			rememberMe: false,
+			useCloudAuth: false // 改为默认使用本地服务器
 		}
 	},
 	methods: {
-		handleLogin() {
+		async handleLogin() {
 			// 验证表单
 			if (!this.email || !this.password) {
 				uni.showToast({
@@ -58,30 +68,61 @@ export default {
 				return;
 			}
 			
-			// 模拟登录API调用
 			uni.showLoading({
 				title: '登录中...'
 			});
 			
-			setTimeout(() => {
-				uni.hideLoading();
-				// 保存登录状态
-				uni.setStorageSync('token', 'demo_token');
-				uni.setStorageSync('userInfo', {
-					id: 1,
-					email: this.email,
-					name: '用户'
-				});
+			try {
+				// 使用本地服务器登录
+				const result = await localDataService.login(this.email, this.password);
 				
-				// 跳转到主页
-				uni.switchTab({
-					url: '/pages/index/index'
+				uni.hideLoading();
+				
+				if (result.success) {
+					// 登录成功后自动同步数据
+					uni.showLoading({
+						title: '同步数据中...'
+					});
+					
+					await localDataService.getAllDataFromCloud();
+					
+					uni.hideLoading();
+					
+					uni.showToast({
+						title: '登录成功',
+						icon: 'success'
+					});
+					
+					// 跳转到主页
+					setTimeout(() => {
+						uni.switchTab({
+							url: '/pages/index/index'
+						});
+					}, 1000);
+				} else {
+					uni.showToast({
+						title: result.message,
+						icon: 'none'
+					});
+				}
+			} catch (error) {
+				uni.hideLoading();
+				uni.showToast({
+					title: '登录失败，请检查服务器是否启动',
+					icon: 'none'
 				});
-			}, 1500);
+			}
 		},
 		goToRegister() {
 			uni.navigateTo({
 				url: '/pages/register/register'
+			});
+		},
+		toggleAuthMode() {
+			this.useCloudAuth = !this.useCloudAuth;
+			uni.showToast({
+				title: this.useCloudAuth ? '已切换到云端登录（已禁用）' : '使用本地服务器登录',
+				icon: 'none'
 			});
 		}
 	}
@@ -154,8 +195,27 @@ export default {
 	font-size: 26rpx;
 }
 
+.auth-mode-switch {
+	text-align: center;
+	margin-top: 30rpx;
+	padding-top: 30rpx;
+	border-top: 1px solid var(--border-color);
+}
+
+.switch-label {
+	font-size: 26rpx;
+	color: var(--text-color-light);
+}
+
+.switch-mode {
+	font-size: 26rpx;
+	color: var(--primary-color);
+	margin-left: 10rpx;
+	text-decoration: underline;
+}
+
 .btn {
 	height: 80rpx;
 	line-height: 80rpx;
 }
-</style> 
+</style>
