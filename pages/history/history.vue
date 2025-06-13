@@ -11,7 +11,7 @@
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
 			<view class="nav-actions">
-				<button class="btn-sm btn-primary" @tap="addNewRecord">新增记录</button>
+				<!-- 导航动作占位符，保持布局平衡 -->
 			</view>
 		</view>
 		
@@ -26,9 +26,6 @@
 				</picker>
 				<view class="stats-btn" @tap="showStatsModal">
 					<text class="stats-text">统计</text>
-				</view>
-				<view class="test-data-btn" @tap="addTestData">
-					<text class="test-data-text">测试数据</text>
 				</view>
 			</view>
 			
@@ -78,10 +75,7 @@
 			
 			<!-- 空状态 -->
 			<view class="empty-state" v-if="isExpanded && filteredWorkouts.length === 0">
-				<view class="empty-icon">📋</view>
-				<text class="empty-text">{{getMonthLabel(selectedMonth)}}暂无训练记录</text>
-				<text class="empty-desc">您可以点击上方月份切换查看其他月份，或添加新的训练记录</text>
-				<button class="btn btn-primary empty-btn" @tap="addNewRecord">添加训练记录</button>
+				<text class="empty-text-large">暂无训练记录</text>
 			</view>
 		</view>
 		
@@ -124,7 +118,10 @@
 			<view class="modal-content detail-modal">
 				<view class="modal-header">
 					<text class="modal-title">训练详情</text>
-					<view class="modal-close" @tap="closeDetailModal">×</view>
+					<view class="modal-header-actions">
+						<button class="delete-btn" @tap="deleteWorkout" size="mini">删除</button>
+						<view class="modal-close" @tap="closeDetailModal">×</view>
+					</view>
 				</view>
 				
 				<view class="modal-body" v-if="selectedWorkout">
@@ -281,14 +278,32 @@ export default {
 		},
 		
 		loadWorkoutHistory() {
-			let history = uni.getStorageSync('workoutHistory') || [];
+			// 获取当前用户信息，实现数据隔离
+			const userInfo = uni.getStorageSync('userInfo');
+			const storageKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
 			
-			// 添加测试数据（如果还没有添加过）
-			const hasTestData = history.some(workout => workout.id && String(workout.id).startsWith('test_'));
-			if (!hasTestData) {
-				const testData = this.generateTestData();
-				history = [...history, ...testData];
-				uni.setStorageSync('workoutHistory', history);
+			let history = uni.getStorageSync(storageKey) || [];
+			
+			// 如果使用新的用户特定存储但没有数据，且存在旧的通用数据，则迁移数据
+			if (history.length === 0 && userInfo && userInfo.id) {
+				const oldData = uni.getStorageSync('workoutHistory') || [];
+				if (oldData.length > 0) {
+					// 迁移旧数据到新的用户特定存储
+					uni.setStorageSync(storageKey, oldData);
+					history = oldData;
+					// 清空旧的通用存储
+					uni.removeStorageSync('workoutHistory');
+				}
+			}
+			
+			// 为没有登录的用户或测试环境添加测试数据
+			if (!userInfo || !userInfo.id) {
+				const hasTestData = history.some(workout => workout.id && String(workout.id).startsWith('test_'));
+				if (!hasTestData) {
+					const testData = this.generateTestData();
+					history = [...history, ...testData];
+					uni.setStorageSync(storageKey, history);
+				}
 			}
 			
 			this.workoutHistory = history;
@@ -663,6 +678,52 @@ export default {
 			this.showDetailModal = false;
 			this.selectedWorkout = null;
 		},
+
+		deleteWorkout() {
+			if (!this.selectedWorkout) return;
+			
+			uni.showModal({
+				title: '确认删除',
+				content: '确定要删除这条训练记录吗？此操作不可恢复。',
+				confirmText: '删除',
+				confirmColor: '#ff4757',
+				cancelText: '取消',
+				success: (res) => {
+					if (res.confirm) {
+						this.confirmDeleteWorkout();
+					}
+				}
+			});
+		},
+
+		confirmDeleteWorkout() {
+			if (!this.selectedWorkout) return;
+			
+			const userInfo = uni.getStorageSync('userInfo');
+			const storageKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+			
+			let workoutHistory = uni.getStorageSync(storageKey) || [];
+			
+			// 从数组中移除该记录
+			workoutHistory = workoutHistory.filter(workout => workout.id !== this.selectedWorkout.id);
+			
+			// 更新存储
+			uni.setStorageSync(storageKey, workoutHistory);
+			
+			// 更新本地数据
+			this.workoutHistory = workoutHistory;
+			
+			// 重新计算月度统计
+			this.calculateMonthStats();
+			
+			// 关闭详情弹窗
+			this.closeDetailModal();
+			
+			uni.showToast({
+				title: '删除成功',
+				icon: 'success'
+			});
+		},
 		
 		addNewRecord() {
 			uni.navigateTo({
@@ -689,7 +750,10 @@ export default {
 				confirmText: '添加',
 				success: (res) => {
 					if (res.confirm) {
-						let history = uni.getStorageSync('workoutHistory') || [];
+						const userInfo = uni.getStorageSync('userInfo');
+						const storageKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+						
+						let history = uni.getStorageSync(storageKey) || [];
 						const testData = this.generateTestData();
 						
 						// 移除已有的测试数据，避免重复
@@ -698,7 +762,7 @@ export default {
 						// 添加新的测试数据
 						history = [...history, ...testData];
 						
-						uni.setStorageSync('workoutHistory', history);
+						uni.setStorageSync(storageKey, history);
 						this.workoutHistory = history;
 						
 						// 自动切换到有数据的月份
@@ -807,6 +871,7 @@ export default {
 .nav-actions {
 	display: flex;
 	align-items: center;
+	min-width: 120rpx; /* 确保右侧有足够的占位空间 */
 }
 
 .btn-sm {
@@ -1030,6 +1095,13 @@ export default {
 	display: block;
 }
 
+.empty-text-large {
+	font-size: 40rpx;
+	font-weight: bold;
+	color: var(--text-color);
+	display: block;
+}
+
 .empty-desc {
 	font-size: 26rpx;
 	color: var(--text-color-light);
@@ -1095,6 +1167,22 @@ export default {
 .modal-title {
 	font-size: 36rpx;
 	font-weight: 600;
+}
+
+.modal-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+}
+
+.delete-btn {
+	background-color: #ff4757;
+	color: white;
+	border: none;
+	border-radius: 6rpx;
+	padding: 10rpx 20rpx;
+	font-size: 24rpx;
+	line-height: 1;
 }
 
 .modal-close {

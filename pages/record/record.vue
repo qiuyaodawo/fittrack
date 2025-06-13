@@ -25,9 +25,9 @@
 				</view>
 				<view class="form-group">
 					<text class="form-label">训练类型</text>
-					<picker :value="workoutTypeIndex" :range="workoutTypes" @change="onWorkoutTypeChange">
-						<view class="picker-value">{{workoutTypes[workoutTypeIndex]}}</view>
-					</picker>
+					<view class="custom-picker" @tap="showWorkoutTypePicker">
+						<text class="picker-value">{{workoutTypes[workoutTypeIndex]}}</text>
+					</view>
 				</view>
 			</view>
 			
@@ -80,15 +80,36 @@
 						<view class="sets-config">
 							<view class="config-item">
 								<text class="config-label">重量(kg)</text>
-								<input type="digit" class="input-sm" v-model="exercise.weight" placeholder="重量" />
+								<input 
+									type="number" 
+									class="input-sm" 
+									v-model="exercise.weight" 
+									placeholder="重量" 
+									@input="validatePositiveInteger($event, 'weight', index)"
+									min="1"
+								/>
 							</view>
 							<view class="config-item">
 								<text class="config-label">次数</text>
-								<input type="number" class="input-sm" v-model="exercise.reps" placeholder="次数" />
+								<input 
+									type="number" 
+									class="input-sm" 
+									v-model="exercise.reps" 
+									placeholder="次数"
+									@input="validatePositiveInteger($event, 'reps', index)"
+									min="1"
+								/>
 							</view>
 							<view class="config-item">
 								<text class="config-label">间隔(秒)</text>
-								<input type="number" class="input-sm" v-model="exercise.rest" placeholder="间隔" />
+								<input 
+									type="number" 
+									class="input-sm" 
+									v-model="exercise.rest" 
+									placeholder="间隔"
+									@input="validatePositiveInteger($event, 'rest', index)"
+									min="1"
+								/>
 							</view>
 						</view>
 					</view>
@@ -157,6 +178,22 @@
 			</view>
 		</view>
 		
+		<!-- 训练类型选择弹窗 -->
+		<view class="workout-type-modal" v-if="showWorkoutTypeModal" @tap.self="closeWorkoutTypePicker">
+			<view class="workout-type-dropdown">
+				<view 
+					class="workout-type-item"
+					:class="{ 'selected': index === workoutTypeIndex }"
+					v-for="(type, index) in workoutTypes" 
+					:key="index"
+					@tap="selectWorkoutType(index)"
+				>
+					<text class="type-text">{{type}}</text>
+					<text class="check-icon" v-if="index === workoutTypeIndex">✓</text>
+				</view>
+			</view>
+		</view>
+
 		<!-- 编辑动作弹窗 -->
 		<view class="modal" v-if="showEditExerciseModal" @tap.self="closeEditExerciseModal">
 			<view class="modal-content edit-exercise-modal">
@@ -193,19 +230,40 @@
 					<!-- 重量设置 -->
 					<view class="edit-form-group">
 						<text class="edit-form-label">重量 (kg)</text>
-						<input type="digit" class="edit-input" v-model="editingExercise.weight" placeholder="请输入重量" />
+						<input 
+							type="number" 
+							class="edit-input" 
+							v-model="editingExercise.weight" 
+							placeholder="请输入重量"
+							@input="validateEditPositiveInteger($event, 'weight')"
+							min="1"
+						/>
 					</view>
 					
 					<!-- 次数设置 -->
 					<view class="edit-form-group">
 						<text class="edit-form-label">次数</text>
-						<input type="number" class="edit-input" v-model="editingExercise.reps" placeholder="请输入次数" />
+						<input 
+							type="number" 
+							class="edit-input" 
+							v-model="editingExercise.reps" 
+							placeholder="请输入次数"
+							@input="validateEditPositiveInteger($event, 'reps')"
+							min="1"
+						/>
 					</view>
 					
 					<!-- 组间休息设置 -->
 					<view class="edit-form-group">
 						<text class="edit-form-label">组间休息 (秒)</text>
-						<input type="number" class="edit-input" v-model="editingExercise.rest" placeholder="请输入休息时间" />
+						<input 
+							type="number" 
+							class="edit-input" 
+							v-model="editingExercise.rest" 
+							placeholder="请输入休息时间"
+							@input="validateEditPositiveInteger($event, 'rest')"
+							min="1"
+						/>
 					</view>
 				</view>
 				
@@ -227,7 +285,7 @@ export default {
 		return {
 			// 训练基本信息
 			workoutInfo: {
-				name: '',
+				name: '训练记录',
 				date: ''
 			},
 			workoutTypeIndex: 0,
@@ -241,6 +299,7 @@ export default {
 			
 			// 弹窗控制
 			showExerciseModal: false,
+			showWorkoutTypeModal: false,
 			editingExerciseIndex: -1,
 			showEditExerciseModal: false,
 			editingExercise: {
@@ -589,8 +648,15 @@ export default {
 		},
 		
 		// 训练信息相关方法
-		onWorkoutTypeChange(e) {
-			this.workoutTypeIndex = e.detail.value;
+		showWorkoutTypePicker() {
+			this.showWorkoutTypeModal = true;
+		},
+		closeWorkoutTypePicker() {
+			this.showWorkoutTypeModal = false;
+		},
+		selectWorkoutType(index) {
+			this.workoutTypeIndex = index;
+			this.showWorkoutTypeModal = false;
 		},
 		
 		// 动作管理方法
@@ -764,6 +830,32 @@ export default {
 				this.editingExercise.setsCount = parseInt(value);
 			}
 		},
+		
+		// 验证正整数输入（动作配置）
+		validatePositiveInteger(event, field, exerciseIndex) {
+			let value = event.detail.value;
+			// 移除非数字字符
+			value = value.replace(/[^\d]/g, '');
+			// 确保不为空且为正数
+			if (value === '' || parseInt(value) <= 0) {
+				value = '';
+			}
+			// 更新对应的动作字段
+			this.selectedExercises[exerciseIndex][field] = value;
+		},
+		
+		// 验证正整数输入（编辑弹窗）
+		validateEditPositiveInteger(event, field) {
+			let value = event.detail.value;
+			// 移除非数字字符
+			value = value.replace(/[^\d]/g, '');
+			// 确保不为空且为正数
+			if (value === '' || parseInt(value) <= 0) {
+				value = '';
+			}
+			// 更新编辑表单字段
+			this.editingExercise[field] = value;
+		},
 		removeExercise(index) {
 			uni.showModal({
 				title: '确认删除',
@@ -863,10 +955,13 @@ export default {
 					duration: this.calculateDuration()
 				};
 				
-				// 保存到本地存储
-				let workoutHistory = uni.getStorageSync('workoutHistory') || [];
+				// 保存到本地存储（按用户隔离）
+				const userInfo = uni.getStorageSync('userInfo');
+				const storageKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+				
+				let workoutHistory = uni.getStorageSync(storageKey) || [];
 				workoutHistory.unshift(workoutData);
-				uni.setStorageSync('workoutHistory', workoutHistory);
+				uni.setStorageSync(storageKey, workoutHistory);
 				
 				// 检查并更新个人记录
 				this.checkForNewRecords(workoutData);
@@ -927,7 +1022,9 @@ export default {
 		
 		// 检查是否有新的个人记录
 		checkForNewRecords(workoutData) {
-			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			const userInfo = uni.getStorageSync('userInfo');
+			const personalRecordsKey = userInfo && userInfo.id ? `personalRecords_${userInfo.id}` : 'personalRecords';
+			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
 			let newRecords = [];
 			
 			// 动作名称映射（与进度页面保持一致）
@@ -1000,7 +1097,7 @@ export default {
 			
 			// 保存更新的记录
 			if (newRecords.length > 0) {
-				uni.setStorageSync('personalRecords', savedRecords);
+				uni.setStorageSync(personalRecordsKey, savedRecords);
 				
 				// 显示新记录通知
 				let message = '恭喜！创造了新个人记录：\n';
@@ -1110,13 +1207,80 @@ export default {
 	color: var(--text-color);
 }
 
-.picker-value {
+.custom-picker {
+	width: 100%;
 	height: 80rpx;
-	line-height: 80rpx;
 	padding: 0 24rpx;
 	border: 2rpx solid var(--border-color);
 	border-radius: 8rpx;
 	background-color: #fff;
+	display: flex;
+	align-items: center;
+	font-size: 28rpx;
+	color: var(--text-color);
+	cursor: pointer;
+	box-sizing: border-box;
+}
+
+.picker-value {
+	width: 100%;
+	line-height: 80rpx;
+}
+
+/* 训练类型选择弹窗 */
+.workout-type-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 1001;
+}
+
+.workout-type-dropdown {
+	position: absolute;
+	top: 480rpx;
+	left: 60rpx;
+	width: 300rpx;
+	background-color: #fff;
+	border-radius: 12rpx;
+	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+	overflow: hidden;
+	z-index: 1002;
+}
+
+.workout-type-item {
+	padding: 24rpx 30rpx;
+	border-bottom: 1rpx solid #f0f0f0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.workout-type-item:last-child {
+	border-bottom: none;
+}
+
+.workout-type-item:hover,
+.workout-type-item.selected {
+	background-color: #f8fafc;
+}
+
+.type-text {
+	font-size: 28rpx;
+	color: var(--text-color);
+}
+
+.workout-type-item.selected .type-text {
+	color: var(--primary-color);
+	font-weight: 500;
+}
+
+.check-icon {
+	font-size: 28rpx;
+	color: var(--primary-color);
 }
 
 .add-exercise-section {
@@ -1564,4 +1728,6 @@ export default {
 	background-color: var(--primary-color);
 	color: #fff;
 }
+
+
 </style>

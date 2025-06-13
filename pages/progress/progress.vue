@@ -10,11 +10,7 @@
 				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>			<view class="nav-actions">
-				<!-- 同步状态指示器 -->
-				<view class="sync-status" @tap="syncData">
-					<text class="sync-icon">{{syncStatus.icon}}</text>
-					<text class="sync-text">{{syncStatus.text}}</text>
-				</view>
+				<!-- 导航动作占位符，保持布局平衡 -->
 			</view>
 		</view>
 		
@@ -231,6 +227,12 @@ export default {
 				url: `/pages/${page}/${page}`
 			});
 		},
+
+		// 获取用户特定的存储键
+		getUserStorageKey(baseKey) {
+			const userInfo = uni.getStorageSync('userInfo');
+			return userInfo && userInfo.id ? `${baseKey}_${userInfo.id}` : baseKey;
+		},
 		recordWorkout() {
 			uni.showToast({
 				title: '功能开发中',
@@ -258,9 +260,10 @@ export default {
 				return;
 			}
 			
-			// 保存体重记录
+			// 保存体重记录（按用户隔离）
 			const currentDate = new Date().toISOString().split('T')[0];
-			const weightHistory = uni.getStorageSync('weightHistory') || [];
+			const weightHistoryKey = this.getUserStorageKey('weightHistory');
+			const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
 			
 			// 添加新的体重记录
 			const newWeightRecord = {
@@ -281,7 +284,7 @@ export default {
 			weightHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
 			
 			// 保存到本地存储
-			uni.setStorageSync('weightHistory', weightHistory);
+			uni.setStorageSync(weightHistoryKey, weightHistory);
 			
 			// 计算体重变化
 			let weightChange = '';
@@ -328,7 +331,8 @@ export default {
 			// 保存手动记录的最大重量
 			const exerciseName = this.exercises[this.exerciseIndex];
 			const standardExerciseName = this.getStandardExerciseName(exerciseName) || exerciseName;
-			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			const personalRecordsKey = this.getUserStorageKey('personalRecords');
+			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
 			const currentDate = new Date().toISOString().split('T')[0];
 			
 			// 检查是否是新记录
@@ -339,7 +343,7 @@ export default {
 					weight: weight,
 					date: currentDate
 				};
-				uni.setStorageSync('personalRecords', savedRecords);
+				uni.setStorageSync(personalRecordsKey, savedRecords);
 				
 				// 如果是新记录，显示庆祝效果
 				if (isNewRecord) {
@@ -374,7 +378,8 @@ export default {
 		},
 		loadWorkoutHistory() {
 			// 从本地存储加载训练记录
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			this.workoutLogs = workoutHistory.map(workout => ({
 				id: workout.id,
 				date: workout.date,
@@ -386,8 +391,10 @@ export default {
 		
 		// 更新个人记录（合并训练记录和手动记录）
 		updatePersonalRecordsWithManualData() {
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
-			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const personalRecordsKey = this.getUserStorageKey('personalRecords');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
 			let records = {};
 			let hasNewRecord = false;
 			
@@ -446,7 +453,7 @@ export default {
 					date: records[key].date
 				};
 			});
-			uni.setStorageSync('personalRecords', recordsToSave);
+			uni.setStorageSync(personalRecordsKey, recordsToSave);
 			
 			// 如果有新记录，3秒后清除新记录标识
 			if (hasNewRecord) {
@@ -460,8 +467,10 @@ export default {
 		
 		// 更新个人记录（仅基于训练记录）
 		updatePersonalRecords() {
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
-			const savedRecords = uni.getStorageSync('personalRecords') || {};
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const personalRecordsKey = this.getUserStorageKey('personalRecords');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
 			let records = {};
 			let hasNewRecord = false;
 			
@@ -510,7 +519,7 @@ export default {
 					date: records[key].date
 				};
 			});
-			uni.setStorageSync('personalRecords', recordsToSave);
+			uni.setStorageSync(personalRecordsKey, recordsToSave);
 			
 			// 如果有新记录，3秒后清除新记录标识
 			if (hasNewRecord) {
@@ -524,8 +533,10 @@ export default {
 		
 		// 更新力量进步统计
 		updateStrengthProgress() {
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
-			const savedProgress = uni.getStorageSync('strengthProgress') || {};
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const strengthProgressKey = this.getUserStorageKey('strengthProgress');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			const savedProgress = uni.getStorageSync(strengthProgressKey) || {};
 			
 			// 获取当前个人记录
 			const currentRecords = {};
@@ -552,12 +563,13 @@ export default {
 			Object.keys(currentRecords).forEach(key => {
 				progressToSave[key] = currentRecords[key];
 			});
-			uni.setStorageSync('strengthProgress', progressToSave);
+			uni.setStorageSync(strengthProgressKey, progressToSave);
 		},
 		
 		// 更新训练统计数据
 		updateTrainingStats() {
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			const now = new Date();
 			const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
 			const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -617,7 +629,8 @@ export default {
 		},
 		viewLogDetails(log) {
 			// 查找完整的训练记录
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			const fullWorkout = workoutHistory.find(workout => workout.id === log.id);
 			
 			if (fullWorkout) {
