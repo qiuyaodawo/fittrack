@@ -327,26 +327,25 @@
 							</view>
 							
 							<view class="exercise-list" v-if="dayTraining.exercises.length > 0">
-								<view class="exercise-item" v-for="(exercise, index) in dayTraining.exercises" :key="index">
-									<view class="exercise-card">
-										<view class="exercise-header">
-											<view class="exercise-name-tag">{{exercise.name}}</view>
-											<view class="exercise-actions">
-												<button class="btn btn-small btn-outline" @tap="editExercise(index)">编辑</button>
-												<button class="btn btn-small btn-danger" @tap="removeExercise(index)">删除</button>
-											</view>
-										</view>
-										<view class="exercise-details">
-											<view class="detail-tag sets-tag">{{exercise.sets}}组</view>
-											<view class="detail-tag reps-tag">{{exercise.reps}}次</view>
-											<view class="detail-tag weight-tag" v-if="exercise.weight">{{exercise.weight}}kg</view>
-											<view class="detail-tag rest-tag" v-if="exercise.rest">休息{{exercise.rest}}</view>
-										</view>
-										<view class="exercise-notes" v-if="exercise.notes">
-											<text class="notes-text">{{exercise.notes}}</text>
+															<view class="exercise-item" v-for="(exercise, index) in dayTraining.exercises" :key="index">
+								<view class="exercise-card">
+									<view class="exercise-header">
+										<text class="exercise-name">{{exercise.name}}</text>
+										<view class="exercise-actions">
+											<button class="action-btn edit-btn" @tap="editExercise(index)">编辑</button>
+											<button class="action-btn delete-btn" @tap="removeExercise(index)">删除</button>
 										</view>
 									</view>
+									<view class="exercise-info">
+										<text class="info-text">{{exercise.sets}}组 × {{exercise.reps}}次</text>
+										<text class="info-text" v-if="exercise.weight">{{exercise.weight}}kg</text>
+										<text class="info-text" v-if="exercise.rest">休息{{exercise.rest}}s</text>
+									</view>
+									<view class="exercise-notes" v-if="exercise.notes">
+										<text class="notes-text">{{exercise.notes}}</text>
+									</view>
 								</view>
+							</view>
 							</view>
 							
 							<view class="empty-state" v-else>
@@ -401,22 +400,22 @@
 					<view v-if="exerciseDetails && exerciseDetails.name">
 						<view class="form-group">
 							<text class="form-label">组数</text>
-							<input :value="exerciseDetails.sets" @input="handleSetsInput" class="form-input" placeholder="3" />
+							<input :value="exerciseDetails.sets" @input="handleSetsInput" class="form-input" placeholder="3" type="number" />
 						</view>
 						
 						<view class="form-group">
-							<text class="form-label">次数/时间</text>
-							<input :value="exerciseDetails.reps" @input="handleRepsInput" placeholder="如：8-12次 或 60秒" class="form-input" />
+							<text class="form-label">次数/时间 (次/秒)</text>
+							<input :value="exerciseDetails.reps" @input="handleRepsInput" placeholder="12" class="form-input" type="number" />
 						</view>
 						
 						<view class="form-group">
 							<text class="form-label">重量 (kg)</text>
-							<input :value="exerciseDetails.weight" @input="handleWeightInput" placeholder="可选" class="form-input" />
+							<input :value="exerciseDetails.weight" @input="handleWeightInput" placeholder="可选" class="form-input" type="number" />
 						</view>
 						
 						<view class="form-group">
-							<text class="form-label">组间休息</text>
-							<input :value="exerciseDetails.rest" @input="handleRestInput" placeholder="如：60-90秒" class="form-input" />
+							<text class="form-label">组间休息 (s)</text>
+							<input :value="exerciseDetails.rest" @input="handleRestInput" placeholder="90" class="form-input" type="number" />
 						</view>
 						
 						<view class="form-group">
@@ -503,9 +502,9 @@ export default {
 			exerciseDetails: {
 				name: '',
 				sets: 3,
-				reps: '8-12',
+				reps: 12,
 				weight: '',
-				rest: '60-90秒',
+				rest: 90,
 				notes: ''
 			},
 					// 自定义选择器显示状态
@@ -528,8 +527,7 @@ export default {
 				腿部: ['杠铃深蹲', '前蹲', '哑铃深蹲', '腿举', '保加利亚深蹲', '罗马尼亚硬拉', '硬拉'],
 				肩部: ['杠铃肩推', '哑铃肩推', '侧平举', '前平举', '阿诺德推举', '倒立撑'],
 				手臂: ['杠铃弯举', '哑铃弯举', '锤式弯举', '窄距卧推', '三头肌下压', '臂屈伸'],
-				核心: ['平板支撑', '卷腹', '俄罗斯转体', '登山者', '死虫', '鸟狗式'],
-				有氧: ['跑步', '游泳', '自行车', '椭圆机', 'HIIT', '波比跳', '开合跳']
+				核心: ['平板支撑', '卷腹', '俄罗斯转体', '登山者', '死虫', '鸟狗式']
 			},
 			
 			myPlans: [
@@ -1092,40 +1090,26 @@ export default {
 		
 		// 处理组数输入
 		handleSetsInput(e) {
-			const value = e.detail.value;
-			// 只允许输入正整数
-			if (/^\d+$/.test(value)) {
-				const numValue = parseInt(value);
-				if (numValue > 0) {
-					this.exerciseDetails.sets = numValue;
-				} else {
-					this.exerciseDetails.sets = 1;
-				}
-			} else {
-				this.exerciseDetails.sets = 1;
-			}
+			const value = parseInt(e.detail.value) || 1;
+			this.exerciseDetails.sets = Math.max(1, value);
 		},
 		
 		// 处理次数输入
 		handleRepsInput(e) {
-			this.exerciseDetails.reps = e.detail.value;
+			const value = parseInt(e.detail.value) || 1;
+			this.exerciseDetails.reps = Math.max(1, value);
 		},
 		
 		// 处理重量输入
 		handleWeightInput(e) {
-			const value = e.detail.value;
-			// 允许空值或正数（包含小数）
-			if (value === '' || /^\d+(\.\d+)?$/.test(value)) {
-				const numValue = parseFloat(value);
-				if (value === '' || numValue >= 0) {
-					this.exerciseDetails.weight = value;
-				}
-			}
+			const value = parseFloat(e.detail.value);
+			this.exerciseDetails.weight = isNaN(value) ? '' : Math.max(0, value);
 		},
 		
 		// 处理组间休息输入
 		handleRestInput(e) {
-			this.exerciseDetails.rest = e.detail.value;
+			const value = parseInt(e.detail.value) || 30;
+			this.exerciseDetails.rest = Math.max(30, value);
 		},
 		
 
@@ -1203,9 +1187,9 @@ export default {
 			this.exerciseDetails = {
 				name: '',
 				sets: 3,
-				reps: '8-12',
+				reps: 12,
 				weight: '',
-				rest: '60-90秒',
+				rest: 90,
 				notes: ''
 			};
 			this.showExerciseSelector = true;
@@ -1222,14 +1206,35 @@ export default {
 		
 		// 删除动作
 		removeExercise(index) {
-			uni.showModal({
-				title: '确认删除',
-				content: '确定要删除这个动作吗？',
-				success: (res) => {
-					if (res.confirm) {
-						this.dayTraining.exercises.splice(index, 1);
+			// 暂时隐藏创建计划弹窗和日编辑弹窗，确保删除确认弹窗能显示
+			const originalShowCreatePlanModal = this.showCreatePlanModal;
+			const originalShowDayEditor = this.showDayEditor;
+			
+			this.showCreatePlanModal = false;
+			this.showDayEditor = false;
+			
+			this.$nextTick(() => {
+				uni.showModal({
+					title: '确认删除',
+					content: '确定要删除这个动作吗？',
+					success: (res) => {
+						if (res.confirm) {
+							this.dayTraining.exercises.splice(index, 1);
+							uni.showToast({
+								title: '删除成功',
+								icon: 'success'
+							});
+						}
+						// 恢复弹窗显示
+						this.showCreatePlanModal = originalShowCreatePlanModal;
+						this.showDayEditor = originalShowDayEditor;
+					},
+					fail: () => {
+						// 失败时也恢复弹窗显示
+						this.showCreatePlanModal = originalShowCreatePlanModal;
+						this.showDayEditor = originalShowDayEditor;
 					}
-				}
+				});
 			});
 		},
 		
@@ -1688,7 +1693,8 @@ export default {
 							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
 							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '保加利亚深蹲 3组 x 10-12次'] },
 							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
-							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] }
+							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] },
+							{ day: '周六', focus: '腿部 (后链)', exercises: ['杠铃硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '小腿提踵 4组 x 15-20次'] }
 						],
 						6: [
 							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
@@ -2818,6 +2824,31 @@ export default {
 	z-index: 10000;
 }
 
+/* 确保uni.showModal显示在最上层 */
+uni-modal, .uni-modal, uni-dialog, .uni-dialog {
+	z-index: 999999 !important;
+}
+
+/* 更细致的弹窗层级控制 */
+page {
+	--modal-z-index: 10000;
+}
+
+/* 针对uni-app的各种原生弹窗组件 */
+.uni-modal__bd, .uni-modal__ft, .uni-modal__hd {
+	z-index: 999999 !important;
+}
+
+/* 适配不同平台的弹窗选择器 */
+.uni-mask {
+	z-index: 999998 !important;
+}
+
+/* H5平台的弹窗 */
+#uni-modal, [class*="uni-modal"] {
+	z-index: 999999 !important;
+}
+
 .modal-content {
 	width: 90%;
 	max-width: 800rpx;
@@ -3461,37 +3492,25 @@ export default {
 }
 
 .exercise-card {
-	background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-	border: 2rpx solid #e2e8f0;
-	border-radius: 16rpx;
-	padding: 24rpx;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
-	transition: all 0.3s ease;
-}
-
-.exercise-card:hover {
-	transform: translateY(-2rpx);
-	box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.12);
-	border-color: var(--primary-color);
+	background-color: #ffffff;
+	border: 1rpx solid #e5e7eb;
+	border-radius: 12rpx;
+	padding: 20rpx;
+	margin-bottom: 16rpx;
+	box-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.1);
 }
 
 .exercise-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 16rpx;
+	margin-bottom: 12rpx;
 }
 
-.exercise-name-tag {
-	background: linear-gradient(135deg, #667eea, #764ba2);
-	color: white;
-	padding: 8rpx 16rpx;
-	border-radius: 20rpx;
-	font-size: 26rpx;
+.exercise-name {
+	font-size: 28rpx;
 	font-weight: 600;
-	max-width: 60%;
-	text-align: center;
-	box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.3);
+	color: #333;
 }
 
 .exercise-actions {
@@ -3499,51 +3518,48 @@ export default {
 	gap: 8rpx;
 }
 
-.exercise-details {
+.action-btn {
+	padding: 6rpx 12rpx;
+	border-radius: 6rpx;
+	font-size: 22rpx;
+	border: none;
+	cursor: pointer;
+}
+
+.edit-btn {
+	background-color: #f3f4f6;
+	color: #374151;
+}
+
+.delete-btn {
+	background-color: #fef2f2;
+	color: #dc2626;
+}
+
+.exercise-info {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8rpx;
-	margin-bottom: 12rpx;
+	gap: 16rpx;
+	margin-bottom: 8rpx;
 }
 
-.detail-tag {
-	padding: 6rpx 12rpx;
-	border-radius: 16rpx;
-	font-size: 22rpx;
-	font-weight: 500;
-	color: white;
-	text-align: center;
-	min-width: 60rpx;
-	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
-}
-
-.sets-tag {
-	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-}
-
-.reps-tag {
-	background: linear-gradient(135deg, #51cf66, #40c057);
-}
-
-.weight-tag {
-	background: linear-gradient(135deg, #339af0, #228be6);
-}
-
-.rest-tag {
-	background: linear-gradient(135deg, #ffd43b, #fab005);
-	color: #333;
+.info-text {
+	font-size: 24rpx;
+	color: #6b7280;
+	background-color: #f9fafb;
+	padding: 4rpx 8rpx;
+	border-radius: 4rpx;
 }
 
 .exercise-notes {
-	background: rgba(241, 245, 249, 0.8);
-	padding: 12rpx 16rpx;
-	border-radius: 12rpx;
-	border-left: 4rpx solid var(--primary-color);
-	margin-top: 12rpx;
+	background-color: #f8fafc;
+	padding: 8rpx 12rpx;
+	border-radius: 6rpx;
+	border-left: 3rpx solid #3b82f6;
 }
 
 .notes-text {
-	font-size: 24rpx;
+	font-size: 22rpx;
 	color: #64748b;
 	line-height: 1.4;
 }

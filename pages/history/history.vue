@@ -47,7 +47,6 @@
 					<text class="month-label">{{getMonthLabel(selectedMonth)}}</text>
 					<view class="month-stats">
 						<text class="stat-item">{{monthStats.workouts}} 次训练</text>
-						<text class="stat-item">{{monthStats.duration}} 小时</text>
 					</view>
 				</view>
 			</view>
@@ -58,7 +57,6 @@
 					<view class="workout-content">
 						<view class="workout-main-info">
 							<text class="workout-name">{{workout.name}}</text>
-							<text class="workout-duration">{{workout.duration}}</text>
 						</view>
 						
 						<view class="workout-sub-info">
@@ -142,10 +140,6 @@
 							<text class="detail-label">开始时间:</text>
 							<text class="detail-value">{{selectedWorkout.startTime}}</text>
 						</view>
-						<view class="detail-row">
-							<text class="detail-label">训练时长:</text>
-							<text class="detail-value">{{selectedWorkout.duration}}</text>
-						</view>
 					</view>
 					
 					<view class="exercises-detail" v-if="selectedWorkout.exercises && selectedWorkout.exercises.length > 0">
@@ -189,8 +183,7 @@ export default {
 			
 			// 月度统计数据
 			monthStats: {
-				workouts: 0,
-				duration: '0.0'
+				workouts: 0
 			}
 		}
 	},
@@ -318,7 +311,6 @@ export default {
 					type: '力量训练',
 					date: '2025-06-15',
 					startTime: '19:30',
-					duration: '65分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -344,7 +336,6 @@ export default {
 					type: '力量训练',
 					date: '2025-06-12',
 					startTime: '18:00',
-					duration: '75分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -370,7 +361,6 @@ export default {
 					type: '有氧训练',
 					date: '2025-05-28',
 					startTime: '07:00',
-					duration: '30分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -388,7 +378,6 @@ export default {
 					type: 'HIIT',
 					date: '2025-05-25',
 					startTime: '20:15',
-					duration: '25分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -415,7 +404,6 @@ export default {
 					type: '力量训练',
 					date: '2024-12-20',
 					startTime: '19:00',
-					duration: '70分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -441,7 +429,6 @@ export default {
 					type: '力量训练',
 					date: '2024-11-15',
 					startTime: '18:30',
-					duration: '50分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -466,7 +453,6 @@ export default {
 					type: '拉伸恢复',
 					date: '2024-10-08',
 					startTime: '21:00',
-					duration: '45分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -492,7 +478,6 @@ export default {
 					type: '功能性训练',
 					date: '2023-09-12',
 					startTime: '17:30',
-					duration: '40分钟',
 					status: '已完成',
 					exercises: [
 						{
@@ -531,14 +516,6 @@ export default {
 			
 			// 计算训练次数
 			this.monthStats.workouts = monthWorkouts.length;
-			
-			// 计算总时长
-			const totalMinutes = monthWorkouts.reduce((sum, workout) => {
-				const duration = parseInt(workout.duration);
-				return sum + (isNaN(duration) ? 0 : duration);
-			}, 0);
-			
-			this.monthStats.duration = (totalMinutes / 60).toFixed(1);
 		},
 		
 		onTrainingTypeChange(e) {
@@ -735,7 +712,7 @@ export default {
 			// 显示详细统计信息的弹窗
 			uni.showModal({
 				title: '训练统计',
-				content: `总训练次数: ${this.workoutHistory.length}次\n本月训练: ${this.monthStats.workouts}次\n本月总时长: ${this.monthStats.duration}小时`,
+				content: `总训练次数: ${this.workoutHistory.length}次\n本月训练: ${this.monthStats.workouts}次`,
 				showCancel: false,
 				confirmText: '知道了'
 			});
@@ -1141,7 +1118,7 @@ export default {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 1000;
+	z-index: 500;
 }
 
 .modal-content {
@@ -1298,7 +1275,7 @@ export default {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 1000;
+	z-index: 600;
 }
 
 .year-month-content {
