@@ -23,12 +23,6 @@
 					<text class="form-label">训练名称</text>
 					<input type="text" class="input" v-model="workoutInfo.name" placeholder="输入训练名称（如：胸肌训练）" />
 				</view>
-				<view class="form-group">
-					<text class="form-label">训练类型</text>
-					<view class="custom-picker" @tap="showWorkoutTypePicker">
-						<text class="picker-value">{{workoutTypes[workoutTypeIndex]}}</text>
-					</view>
-				</view>
 			</view>
 			
 			<!-- 添加动作按钮 -->
@@ -178,21 +172,7 @@
 			</view>
 		</view>
 		
-		<!-- 训练类型选择弹窗 -->
-		<view class="workout-type-modal" v-if="showWorkoutTypeModal" @tap.self="closeWorkoutTypePicker">
-			<view class="workout-type-dropdown">
-				<view 
-					class="workout-type-item"
-					:class="{ 'selected': index === workoutTypeIndex }"
-					v-for="(type, index) in workoutTypes" 
-					:key="index"
-					@tap="selectWorkoutType(index)"
-				>
-					<text class="type-text">{{type}}</text>
-					<text class="check-icon" v-if="index === workoutTypeIndex">✓</text>
-				</view>
-			</view>
-		</view>
+
 
 		<!-- 编辑动作弹窗 -->
 		<view class="modal" v-if="showEditExerciseModal" @tap.self="closeEditExerciseModal">
@@ -288,8 +268,7 @@ export default {
 				name: '训练记录',
 				date: ''
 			},
-			workoutTypeIndex: 0,
-			workoutTypes: ['力量训练', '有氧训练', 'HIIT', '拉伸恢复', '功能性训练'],
+
 			
 			// 选中的动作列表
 			selectedExercises: [],
@@ -299,7 +278,7 @@ export default {
 			
 			// 弹窗控制
 			showExerciseModal: false,
-			showWorkoutTypeModal: false,
+
 			editingExerciseIndex: -1,
 			showEditExerciseModal: false,
 			editingExercise: {
@@ -648,16 +627,7 @@ export default {
 		},
 		
 		// 训练信息相关方法
-		showWorkoutTypePicker() {
-			this.showWorkoutTypeModal = true;
-		},
-		closeWorkoutTypePicker() {
-			this.showWorkoutTypeModal = false;
-		},
-		selectWorkoutType(index) {
-			this.workoutTypeIndex = index;
-			this.showWorkoutTypeModal = false;
-		},
+
 		
 		// 动作管理方法
 		showAddExerciseModal() {
@@ -947,12 +917,11 @@ export default {
 				const workoutData = {
 					id: Date.now(),
 					name: this.workoutInfo.name,
-					type: this.workoutTypes[this.workoutTypeIndex],
+					type: '力量训练',
 					date: this.workoutInfo.date,
 					startTime: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'),
 					exercises: convertedExercises,
-					status: '已完成',
-					duration: this.calculateDuration()
+					status: '已完成'
 				};
 				
 				// 保存到本地存储（按用户隔离）
@@ -1001,24 +970,7 @@ export default {
 			}
 		},
 		
-		// 计算训练时长
-		calculateDuration() {
-			let totalTime = 0;
-			this.selectedExercises.forEach(exercise => {
-				const setsCount = exercise.setsCount || 1;
-				const restTime = parseInt(exercise.rest) || 90;
-				
-				// 每组假设需要30秒执行时间
-				totalTime += setsCount * 30;
-				// 加上组间休息时间（组数-1次休息）
-				totalTime += (setsCount - 1) * restTime;
-				// 动作间休息2分钟
-				totalTime += 120;
-			});
-			
-			// 转换为分钟
-			return Math.round(totalTime / 60) + ' 分钟';
-		},
+
 		
 		// 检查是否有新的个人记录
 		checkForNewRecords(workoutData) {
@@ -1227,61 +1179,7 @@ export default {
 	line-height: 80rpx;
 }
 
-/* 训练类型选择弹窗 */
-.workout-type-modal {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 1001;
-}
 
-.workout-type-dropdown {
-	position: absolute;
-	top: 480rpx;
-	left: 60rpx;
-	width: 300rpx;
-	background-color: #fff;
-	border-radius: 12rpx;
-	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
-	overflow: hidden;
-	z-index: 1002;
-}
-
-.workout-type-item {
-	padding: 24rpx 30rpx;
-	border-bottom: 1rpx solid #f0f0f0;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	cursor: pointer;
-	transition: background-color 0.2s;
-}
-
-.workout-type-item:last-child {
-	border-bottom: none;
-}
-
-.workout-type-item:hover,
-.workout-type-item.selected {
-	background-color: #f8fafc;
-}
-
-.type-text {
-	font-size: 28rpx;
-	color: var(--text-color);
-}
-
-.workout-type-item.selected .type-text {
-	color: var(--primary-color);
-	font-weight: 500;
-}
-
-.check-icon {
-	font-size: 28rpx;
-	color: var(--primary-color);
-}
 
 .add-exercise-section {
 	margin-bottom: 40rpx;

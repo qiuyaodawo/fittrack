@@ -54,16 +54,6 @@
 					<text class="stat-card-title">训练频率</text>
 					<view class="stat-card-info">
 						<view class="stat-info-item">
-							<text class="stat-info-label">本周训练</text>
-							<text class="stat-info-value">{{trainingStats.thisWeek}} 次</text>
-						</view>
-						<view class="stat-info-item">
-							<text class="stat-info-label">平均时长</text>
-							<text class="stat-info-value">{{trainingStats.avgDuration}}</text>
-						</view>
-					</view>
-					<view class="stat-info-row">
-						<view class="stat-info-item">
 							<text class="stat-info-label">本月训练</text>
 							<text class="stat-info-value">{{trainingStats.thisMonth}} 次</text>
 						</view>
@@ -85,7 +75,6 @@
 					<view class="table-header">
 						<view class="th th-date">日期</view>
 						<view class="th th-type">训练类型</view>
-						<view class="th th-duration">时长</view>
 						<view class="th th-status">状态</view>
 						<view class="th th-action">操作</view>
 					</view>
@@ -94,7 +83,6 @@
 						<view class="table-row" v-for="(log, index) in workoutLogs" :key="index">
 							<view class="td td-date">{{log.date}}</view>
 							<view class="td td-type">{{log.type}}</view>
-							<view class="td td-duration">{{log.duration}}</view>
 							<view class="td td-status">
 								<view class="badge badge-success">{{log.status}}</view>
 							</view>
@@ -149,10 +137,8 @@ export default {
 			workoutLogs: [],
 			personalRecords: [],
 			strengthProgress: [],			trainingStats: {
-				thisWeek: 0,
 				thisMonth: 0,
-				total: 0,
-				avgDuration: '0 分钟'
+				total: 0
 			},
 			
 			// 同步状态
@@ -384,7 +370,6 @@ export default {
 				id: workout.id,
 				date: workout.date,
 				type: workout.name,
-				duration: workout.duration,
 				status: workout.status
 			}));
 		},
@@ -571,41 +556,22 @@ export default {
 			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
 			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			const now = new Date();
-			const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
 			const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 			
-			let thisWeekCount = 0;
 			let thisMonthCount = 0;
-			let totalDuration = 0;
 			
 			workoutHistory.forEach(workout => {
 				const workoutDate = new Date(workout.date);
-				
-				// 统计本周训练
-				if (workoutDate >= thisWeekStart) {
-					thisWeekCount++;
-				}
 				
 				// 统计本月训练
 				if (workoutDate >= thisMonthStart) {
 					thisMonthCount++;
 				}
-				
-				// 累计训练时长
-				const duration = parseInt(workout.duration);
-				if (!isNaN(duration)) {
-					totalDuration += duration;
-				}
 			});
 			
-			// 计算平均时长
-			const avgDuration = workoutHistory.length > 0 ? Math.round(totalDuration / workoutHistory.length) : 0;
-			
 			this.trainingStats = {
-				thisWeek: thisWeekCount,
 				thisMonth: thisMonthCount,
-				total: workoutHistory.length,
-				avgDuration: avgDuration + ' 分钟'
+				total: workoutHistory.length
 			};
 		},
 		
@@ -636,7 +602,6 @@ export default {
 			if (fullWorkout) {
 				let detailText = `训练名称：${fullWorkout.name}\n`;
 				detailText += `训练类型：${fullWorkout.type}\n`;
-				detailText += `训练时长：${fullWorkout.duration}\n`;
 				detailText += `开始时间：${fullWorkout.startTime}\n\n`;
 				detailText += `训练动作：\n`;
 				
@@ -996,9 +961,7 @@ export default {
 	flex: 3;
 }
 
-.th-duration, .td-duration {
-	flex: 2;
-}
+
 
 .th-status, .td-status {
 	flex: 2;
