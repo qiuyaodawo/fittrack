@@ -11,10 +11,7 @@
 				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
 			</view>
 			<view class="nav-actions">
-				<view class="sync-status" @tap="syncData">
-					<text class="sync-icon">⚡</text>
-					<text class="sync-text">{{ syncStatus.text }}</text>
-				</view>
+				<!-- 导航动作占位符，保持布局平衡 -->
 			</view>
 		</view>
 		
@@ -576,6 +573,12 @@ export default {
 			uni.reLaunch({
 				url: `/pages/${page}/${page}`
 			});
+		},
+
+		// 获取用户特定的存储键
+		getUserStorageKey(baseKey) {
+			const userInfo = uni.getStorageSync('userInfo');
+			return userInfo && userInfo.id ? `${baseKey}_${userInfo.id}` : baseKey;
 		},
 		recordWorkout() {
 			uni.showToast({
@@ -1301,9 +1304,10 @@ export default {
 			
 			try {
 				// 保存到本地存储
-				const savedPlans = uni.getStorageSync('myPlans') || [];
+				const myPlansKey = this.getUserStorageKey('myPlans');
+				const savedPlans = uni.getStorageSync(myPlansKey) || [];
 				savedPlans.unshift(planData);
-				uni.setStorageSync('myPlans', savedPlans);
+				uni.setStorageSync(myPlansKey, savedPlans);
 				
 				// 尝试同步到云端
 				const userInfo = uni.getStorageSync('userInfo');

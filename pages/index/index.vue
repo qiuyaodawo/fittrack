@@ -22,9 +22,8 @@
 						<text class="section-title">欢迎回来, {{userInfo.name}}!</text>
 					</view>
 					<view class="header-actions">
-						<view class="sync-status" @tap="handleSync">
-							<text class="sync-icon">{{ syncStatus.icon }}</text>
-							<text class="sync-text">{{ syncStatus.text }}</text>
+						<view class="sync-status" @tap="handleLogout">
+							<text class="sync-text">退出登录</text>
 						</view>
 						<view class="user-avatar">
 							<image src="/static/images/avatar.png" mode="aspectFill"></image>
@@ -109,11 +108,7 @@ export default {
 				thisWeek: '0 次训练',
 				weeklyProgress: '开始您的健身之旅'
 			},
-			syncStatus: {
-				icon: '🔄',
-				text: '点击同步',
-				syncing: false
-			},
+
 			weeklyPlans: []
 		}
 	},
@@ -124,8 +119,7 @@ export default {
 			this.userInfo = userInfoStorage;
 		}
 		
-		// 更新同步状态
-		this.updateSyncStatus();
+
 		
 		// 加载体重信息
 		this.loadWeightInfo();
@@ -146,82 +140,35 @@ export default {
 		}
 	},
 	methods: {
-		// 处理数据同步
-		async handleSync() {
-			if (this.syncStatus.syncing) return;
-			
-			if (!localDataService.isLoggedIn) {
-				uni.showModal({
-					title: '提示',
-					content: '需要登录才能同步数据，是否前往登录？',
-					success: (res) => {
-						if (res.confirm) {
-							uni.navigateTo({
+		// 处理退出登录
+		handleLogout() {
+			uni.showModal({
+				title: '退出确认',
+				content: '确定要退出登录吗？',
+				success: (res) => {
+					if (res.confirm) {
+						// 清除登录信息和用户数据
+						uni.removeStorageSync('userInfo');
+						uni.removeStorageSync('isLoggedIn');
+						
+						// 提示退出成功
+						uni.showToast({
+							title: '已退出登录',
+							icon: 'success'
+						});
+						
+						// 跳转到登录页面
+						setTimeout(() => {
+							uni.reLaunch({
 								url: '/pages/login/login'
 							});
-						}
+						}, 1500);
 					}
-				});
-				return;
-			}
-			
-			this.syncStatus.syncing = true;
-			this.syncStatus.icon = '⏳';
-			this.syncStatus.text = '同步中...';
-			
-			try {
-				const result = await localDataService.autoSync();
-				
-				if (result.success) {
-					this.syncStatus.icon = '✅';
-					this.syncStatus.text = '同步成功';
-					
-					// 重新加载数据
-					this.loadWeightInfo();
-					this.loadTrainingInfo();
-					
-					uni.showToast({
-						title: '数据同步成功',
-						icon: 'success'
-					});
-				} else {
-					this.syncStatus.icon = '❌';
-					this.syncStatus.text = '同步失败';
-					
-					uni.showToast({
-						title: result.message || '数据同步失败',
-						icon: 'none'
-					});
 				}
-			} catch (error) {
-				this.syncStatus.icon = '❌';
-				this.syncStatus.text = '连接失败';
-				
-				uni.showToast({
-					title: '请检查服务器是否启动',
-					icon: 'none'
-				});
-			}
-			
-			this.syncStatus.syncing = false;
-			
-			// 3秒后恢复默认状态
-			setTimeout(() => {
-				this.syncStatus.icon = '🔄';
-				this.syncStatus.text = '点击同步';
-			}, 3000);
+			});
 		},
 		
-		// 更新同步状态
-		updateSyncStatus() {
-			if (localDataService.isLoggedIn) {
-				this.syncStatus.icon = '🔄';
-				this.syncStatus.text = '点击同步';
-			} else {
-				this.syncStatus.icon = '🔒';
-				this.syncStatus.text = '需要登录';
-			}
-		},
+
 		
 		navigateTo(page) {
 			uni.reLaunch({
@@ -245,7 +192,9 @@ export default {
 			});
 		},
 		loadWeightInfo() {
-			const weightHistory = uni.getStorageSync('weightHistory') || [];
+			const userInfo = uni.getStorageSync('userInfo');
+			const weightHistoryKey = userInfo && userInfo.id ? `weightHistory_${userInfo.id}` : 'weightHistory';
+			const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
 			
 			if (weightHistory.length === 0) {
 				this.weightInfo = {
@@ -293,7 +242,9 @@ export default {
 			return diffDays;
 		},
 		loadTrainingInfo() {
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			const userInfo = uni.getStorageSync('userInfo');
+			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			
 			if (workoutHistory.length === 0) {
 				this.trainingInfo = {
@@ -377,9 +328,12 @@ export default {
 			}
 		},
 		getDayPlanFromStorage(dayName) {
-			// 从本地存储获取用户的训练计划
-			const myPlans = uni.getStorageSync('myPlans') || [];
-			const workoutHistory = uni.getStorageSync('workoutHistory') || [];
+			// 从本地存储获取用户的训练计划（按用户隔离）
+			const userInfo = uni.getStorageSync('userInfo');
+			const myPlansKey = userInfo && userInfo.id ? `myPlans_${userInfo.id}` : 'myPlans';
+			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+			const myPlans = uni.getStorageSync(myPlansKey) || [];
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			
 			// 找到进行中的计划
 			const activePlan = myPlans.find(plan => plan.status === '进行中');

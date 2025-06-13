@@ -8,14 +8,44 @@
 			
 			<form @submit="handleLogin">
 				<view class="form-group">
-					<input type="text" class="input" v-model="email" placeholder="邮箱地址" />
-					<view class="password-input-container">
-						<input 
-							type="password"
-							class="input password-input" 
-							v-model="password" 
-							placeholder="密码" 
-						/>
+					<input type="text" class="input email-input" v-model="email" placeholder="邮箱地址" />
+					<view class="custom-input-container">
+						<view class="custom-input" @tap="focusPasswordInput">
+							<input 
+								ref="passwordInput"
+								:type="showPassword ? 'text' : 'password'"
+								v-model="password" 
+								@input="validatePassword"
+								@focus="passwordFocused = true"
+								@blur="passwordFocused = false"
+								class="hidden-input"
+							/>
+							<view class="input-display">
+								<text v-if="!password && !passwordFocused" class="placeholder-text">密码</text>
+								<text v-else class="input-text">
+									{{ showPassword ? password : '●'.repeat(password.length) }}
+								</text>
+								<view v-if="passwordFocused" class="cursor-blink"></view>
+							</view>
+							<view class="password-toggle" @tap.stop="togglePasswordVisibility">
+								<view class="eye-icon" :class="{ 'eye-hidden': !showPassword }">
+									<view class="eye-shape"></view>
+									<view class="eye-slash-line" v-if="!showPassword"></view>
+								</view>
+							</view>
+						</view>
+					</view>
+					<!-- 密码提示信息 -->
+					<view class="password-hint" v-if="password">
+						<text class="hint-item" :class="{ 'valid': passwordValidation.length }">
+							长度8-16位 {{ passwordValidation.length ? '✓' : '✗' }}
+						</text>
+						<text class="hint-item" :class="{ 'valid': passwordValidation.hasNumber }">
+							包含数字 {{ passwordValidation.hasNumber ? '✓' : '✗' }}
+						</text>
+						<text class="hint-item" :class="{ 'valid': passwordValidation.hasLetter }">
+							包含英文 {{ passwordValidation.hasLetter ? '✓' : '✗' }}
+						</text>
 					</view>
 				</view>
 				
@@ -34,13 +64,7 @@
 				<text class="text-primary" @tap="goToRegister">立即注册</text>
 			</view>
 			
-			<!-- 认证模式切换 -->
-			<view class="auth-mode-switch">
-				<text class="switch-label">认证模式：</text>
-				<text class="switch-mode" @tap="toggleAuthMode">
-					{{ useCloudAuth ? '云端登录' : '本地登录' }}
-				</text>
-			</view>
+
 		</view>
 	</view>
 </template>
@@ -54,7 +78,13 @@ export default {
 			email: '',
 			password: '',
 			rememberMe: false,
-			useCloudAuth: false // 改为默认使用本地服务器
+			showPassword: false,
+			passwordFocused: false,
+			passwordValidation: {
+				length: false,
+				hasNumber: false,
+				hasLetter: false
+			}
 		}
 	},
 	methods: {
@@ -118,12 +148,19 @@ export default {
 				url: '/pages/register/register'
 			});
 		},
-		toggleAuthMode() {
-			this.useCloudAuth = !this.useCloudAuth;
-			uni.showToast({
-				title: this.useCloudAuth ? '已切换到云端登录（已禁用）' : '使用本地服务器登录',
-				icon: 'none'
-			});
+		togglePasswordVisibility() {
+			this.showPassword = !this.showPassword;
+		},
+		validatePassword() {
+			const password = this.password;
+			this.passwordValidation = {
+				length: password.length >= 8 && password.length <= 16,
+				hasNumber: /\d/.test(password),
+				hasLetter: /[a-zA-Z]/.test(password)
+			};
+		},
+		focusPasswordInput() {
+			this.$refs.passwordInput.focus();
 		}
 	}
 }
@@ -173,16 +210,181 @@ export default {
 }
 
 .input {
-	height: 80rpx;
+	width: 100%;
+	height: 88rpx;
+	margin-bottom: 20rpx;
+	padding: 0 24rpx;
+	border: 2rpx solid var(--border-color);
+	border-radius: 8rpx;
+	background-color: #fff;
+	font-size: 28rpx;
+	box-sizing: border-box;
+}
+
+.email-input {
+	/* 邮箱输入框保持默认样式 */
+}
+
+/* 自定义输入框容器 */
+.custom-input-container {
+	position: relative;
 	margin-bottom: 20rpx;
 }
 
-.password-input-container {
+.custom-input {
 	position: relative;
+	display: flex;
+	align-items: center;
+	background: #fff;
+	border: 2rpx solid var(--border-color);
+	border-radius: 8rpx;
+	padding: 0 90rpx 0 24rpx;
+	height: 88rpx;
+	cursor: text;
+	box-sizing: border-box;
 }
 
-.password-input {
-	padding-right: 20rpx;
+
+
+.hidden-input {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	z-index: 1;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-size: 28rpx;
+}
+
+.input-display {
+	flex: 1;
+	position: relative;
+	display: flex;
+	align-items: center;
+	height: 100%;
+	overflow: hidden;
+}
+
+.placeholder-text {
+	color: #9ca3af;
+	font-size: 28rpx;
+	line-height: 1;
+}
+
+.input-text {
+	color: #111827;
+	font-size: 28rpx;
+	line-height: 1;
+	font-family: system-ui, -apple-system, sans-serif;
+	letter-spacing: 0.5rpx;
+}
+
+.cursor-blink {
+	width: 2rpx;
+	height: 32rpx;
+	background: var(--primary-color);
+	margin-left: 2rpx;
+	animation: blink 1s infinite;
+}
+
+@keyframes blink {
+	0%, 50% { opacity: 1; }
+	51%, 100% { opacity: 0; }
+}
+
+/* 密码切换按钮 */
+.password-toggle {
+	position: absolute;
+	right: 20rpx;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 15;
+	width: 60rpx;
+	height: 60rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.password-toggle:active {
+	transform: translateY(-50%) scale(0.9);
+}
+
+.eye-icon {
+	position: relative;
+	width: 40rpx;
+	height: 26rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.eye-shape {
+	width: 40rpx;
+	height: 26rpx;
+	border: 2rpx solid #9ca3af;
+	border-radius: 50%;
+	position: relative;
+	transition: border-color 0.2s ease;
+}
+
+.eye-shape::after {
+	content: '';
+	width: 10rpx;
+	height: 10rpx;
+	background-color: #9ca3af;
+	border-radius: 50%;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	transition: background-color 0.2s ease;
+}
+
+.eye-slash-line {
+	position: absolute;
+	width: 48rpx;
+	height: 2rpx;
+	background-color: #9ca3af;
+	transform: rotate(-45deg);
+	z-index: 1;
+	transition: background-color 0.2s ease;
+}
+
+.password-toggle:hover .eye-shape {
+	border-color: #6b7280;
+}
+
+.password-toggle:hover .eye-shape::after {
+	background-color: #6b7280;
+}
+
+.password-toggle:hover .eye-slash-line {
+	background-color: #6b7280;
+}
+
+.password-hint {
+	margin-top: 16rpx;
+	margin-bottom: 10rpx;
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+}
+
+.hint-item {
+	font-size: 24rpx;
+	color: #ef4444;
+	line-height: 1.2;
+}
+
+.hint-item.valid {
+	color: #10b981;
 }
 
 .form-options {
