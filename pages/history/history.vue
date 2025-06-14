@@ -150,7 +150,11 @@
 							
 							<view class="sets-detail" v-if="exercise.sets && exercise.sets.length > 0">
 								<view class="set-detail" v-for="(set, setIndex) in exercise.sets" :key="setIndex">
-									<text class="set-detail-text">第{{setIndex + 1}}组: {{set.weight}}kg × {{set.reps}}次</text>
+									<text class="set-detail-text">
+										第{{setIndex + 1}}组: 
+										<span v-if="set.weight && set.weight !== '' && set.weight !== '0' && parseFloat(set.weight) > 0">{{set.weight}}kg × </span>
+										{{set.reps}}次
+									</text>
 									<text class="set-rest" v-if="set.rest">休息{{set.rest}}秒</text>
 								</view>
 							</view>
@@ -1312,6 +1316,7 @@ export default {
 	border-radius: 50%;
 	background-color: #f3f4f6;
 	color: var(--text-color-light);
+	line-height: 1;
 }
 
 .year-tabs {
