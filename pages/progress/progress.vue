@@ -33,41 +33,24 @@
 							<text class="pr-date">{{weightChangeInfo.date}}</text>
 						</view>
 						
-						<!-- 近7天体重变化折线图 -->
+						<!-- 近7天体重变化条形图 -->
 						<view class="weight-chart" v-if="weightChangeInfo.chartData.length > 0">
 							<text class="chart-title">近7天变化</text>
-							<view class="line-chart">
-								<view class="chart-container">
-									<!-- 背景网格 -->
-									<view class="chart-grid"></view>
-									
-									<!-- 数据点 -->
+							<view class="bar-chart">
+								<view class="chart-bars">
 									<view 
-										class="chart-point" 
-										v-for="(item, index) in getValidDataPoints()" 
-										:key="index"
-										:style="getPointStyle(item.item, item.originalIndex)"
-									>
-										<view class="point-tooltip">{{item.item.weight}}kg</view>
-									</view>
-									
-									<!-- 连接线 -->
-									<view 
-										class="chart-line-segment"
-										v-for="(line, index) in getLineSegments()"
-										:key="index"
-										:style="line.style"
-									></view>
-								</view>
-								
-								<!-- 日期标签 -->
-								<view class="chart-labels">
-									<view 
-										class="chart-label" 
+										class="chart-bar-item" 
 										v-for="(item, index) in weightChangeInfo.chartData" 
 										:key="index"
 									>
-										{{item.dateLabel}}
+										<view 
+											class="chart-bar"
+											:class="{'no-data': item.weight === null}"
+											:style="getBarStyle(item)"
+										>
+											<text class="bar-value" v-if="item.weight">{{item.weight}}kg</text>
+										</view>
+										<text class="bar-label">{{item.dateLabel}}</text>
 									</view>
 								</view>
 							</view>
@@ -1183,95 +1166,50 @@ export default {
 		
 
 		
-		// 获取有效数据点
-		getValidDataPoints() {
-			if (!this.weightChangeInfo.chartData) return [];
-			
-			return this.weightChangeInfo.chartData
-				.map((item, index) => ({ item, originalIndex: index }))
-				.filter(data => data.item.weight !== null);
-		},
-		
-		// 计算数据点位置样式
-		getPointStyle(item, index) {
-			if (!item.weight || !this.weightChangeInfo.chartData) {
-				return { display: 'none' };
+		// 计算条形图样式
+		getBarStyle(item) {
+			if (!item.weight) {
+				return {
+					height: '15rpx',
+					backgroundColor: '#e5e7eb',
+					opacity: '0.5'
+				};
 			}
 			
-			// 获取所有有效体重数据
+			// 获取所有有效体重数据来计算相对高度
 			const validWeights = this.weightChangeInfo.chartData
 				.filter(item => item.weight !== null)
 				.map(item => item.weight);
 			
 			if (validWeights.length === 0) {
-				return { display: 'none' };
+				return { height: '0' };
+			}
+			
+			// 如果只有一个数据点，使用固定高度
+			if (validWeights.length === 1) {
+				return {
+					height: '120rpx',
+					backgroundColor: 'var(--primary-color)'
+				};
 			}
 			
 			const minWeight = Math.min(...validWeights);
 			const maxWeight = Math.max(...validWeights);
-			const range = maxWeight - minWeight || 0.1; // 避免除零，最小范围0.1
+			let range = maxWeight - minWeight;
 			
-			// 计算水平位置（基于原始索引）
-			const leftPercent = (index / Math.max(this.weightChangeInfo.chartData.length - 1, 1)) * 100;
+			// 如果体重差异太小（小于0.5kg），设置最小显示范围
+			if (range < 0.5) {
+				range = 0.5;
+			}
 			
-			// 计算垂直位置（基于体重值，从上往下，留出边距）
+			// 计算相对高度，最小60rpx，最大200rpx
 			const normalizedValue = (item.weight - minWeight) / range;
-			const topPercent = 10 + (1 - normalizedValue) * 70; // 10%到80%的范围
+			const barHeight = 60 + normalizedValue * 140;
 			
 			return {
-				left: `${leftPercent}%`,
-				top: `${topPercent}%`,
-				position: 'absolute'
+				height: `${barHeight}rpx`,
+				backgroundColor: 'var(--primary-color)'
 			};
-		},
-		
-		// 计算连接线段
-		getLineSegments() {
-			const validPoints = this.getValidDataPoints();
-			if (validPoints.length < 2) return [];
-			
-			const segments = [];
-			const validWeights = validPoints.map(p => p.item.weight);
-			const minWeight = Math.min(...validWeights);
-			const maxWeight = Math.max(...validWeights);
-			const range = maxWeight - minWeight || 0.1; // 避免除零
-			
-			for (let i = 0; i < validPoints.length - 1; i++) {
-				const point1 = validPoints[i];
-				const point2 = validPoints[i + 1];
-				
-				// 计算两点位置（与getPointStyle保持一致）
-				const x1 = (point1.originalIndex / Math.max(this.weightChangeInfo.chartData.length - 1, 1)) * 100;
-				const normalizedValue1 = (point1.item.weight - minWeight) / range;
-				const y1 = 10 + (1 - normalizedValue1) * 70;
-				
-				const x2 = (point2.originalIndex / Math.max(this.weightChangeInfo.chartData.length - 1, 1)) * 100;
-				const normalizedValue2 = (point2.item.weight - minWeight) / range;
-				const y2 = 10 + (1 - normalizedValue2) * 70;
-				
-				// 计算线段长度和角度
-				const deltaX = x2 - x1;
-				const deltaY = y2 - y1;
-				const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-				const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-				
-				segments.push({
-					style: {
-						position: 'absolute',
-						left: `${x1}%`,
-						top: `${y1}%`,
-						width: `${length}%`,
-						height: '3px',
-						backgroundColor: '#3b82f6',
-						transformOrigin: '0 50%',
-						transform: `rotate(${angle}deg)`,
-						zIndex: 1,
-						borderRadius: '2px'
-					}
-				});
-			}
-			
-			return segments;
 		}
 	}
 }
@@ -1655,127 +1593,70 @@ export default {
 }
 
 .chart-title {
-	font-size: 24rpx;
-	color: var(--text-color-light);
+	font-size: 26rpx;
+	color: var(--text-color);
 	margin-bottom: 15rpx;
 	display: block;
+	font-weight: 500;
 }
 
-.line-chart {
+.bar-chart {
 	width: 100%;
-	background-color: #fafafa;
-	border-radius: 8rpx;
+	background-color: #ffffff;
+	border-radius: 12rpx;
 	padding: 20rpx;
 	box-sizing: border-box;
+	border: 1rpx solid #e5e7eb;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
-.chart-container {
-	position: relative;
-	height: 200rpx;
-	width: 100%;
-	margin-bottom: 20rpx;
-	overflow: hidden;
-}
-
-.chart-grid {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: 
-		linear-gradient(to bottom, 
-			transparent 0%, transparent 19%, 
-			#e5e7eb 19%, #e5e7eb 21%, 
-			transparent 21%, transparent 39%, 
-			#e5e7eb 39%, #e5e7eb 41%, 
-			transparent 41%, transparent 59%, 
-			#e5e7eb 59%, #e5e7eb 61%, 
-			transparent 61%, transparent 79%, 
-			#e5e7eb 79%, #e5e7eb 81%, 
-			transparent 81%),
-		linear-gradient(to right,
-			transparent 0%, transparent 15.5%,
-			#e5e7eb 15.5%, #e5e7eb 17.5%,
-			transparent 17.5%, transparent 31.5%,
-			#e5e7eb 31.5%, #e5e7eb 33.5%,
-			transparent 33.5%, transparent 47.5%,
-			#e5e7eb 47.5%, #e5e7eb 49.5%,
-			transparent 49.5%, transparent 63.5%,
-			#e5e7eb 63.5%, #e5e7eb 65.5%,
-			transparent 65.5%, transparent 79.5%,
-			#e5e7eb 79.5%, #e5e7eb 81.5%,
-			transparent 81.5%);
-	pointer-events: none;
-}
-
-.chart-line-segment {
-	background-color: var(--primary-color);
-	border-radius: 1rpx;
-}
-
-.chart-point {
-	width: 16rpx;
-	height: 16rpx;
-	background-color: var(--primary-color);
-	border: 4rpx solid #fff;
-	border-radius: 50%;
-	transform: translate(-50%, -50%);
-	cursor: pointer;
-	transition: all 0.3s ease;
-	z-index: 2;
-	box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.4);
-}
-
-.chart-point:hover {
-	width: 20rpx;
-	height: 20rpx;
-	box-shadow: 0 6rpx 16rpx rgba(59, 130, 246, 0.6);
-}
-
-.chart-point:hover .point-tooltip {
-	opacity: 1;
-	transform: translateX(-50%) translateY(-100%) scale(1);
-}
-
-.point-tooltip {
-	position: absolute;
-	bottom: 25rpx;
-	left: 50%;
-	transform: translateX(-50%) translateY(-100%) scale(0.8);
-	background-color: rgba(0, 0, 0, 0.8);
-	color: white;
-	padding: 8rpx 12rpx;
-	border-radius: 6rpx;
-	font-size: 20rpx;
-	white-space: nowrap;
-	opacity: 0;
-	transition: all 0.3s ease;
-	pointer-events: none;
-	z-index: 3;
-}
-
-.point-tooltip::after {
-	content: '';
-	position: absolute;
-	top: 100%;
-	left: 50%;
-	transform: translateX(-50%);
-	border: 6rpx solid transparent;
-	border-top-color: rgba(0, 0, 0, 0.8);
-}
-
-.chart-labels {
+.chart-bars {
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-end;
+	height: 300rpx;
+	padding: 40rpx 10rpx 0 10rpx;
 }
 
-.chart-label {
-	font-size: 20rpx;
-	color: var(--text-color-light);
-	text-align: center;
+.chart-bar-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 	flex: 1;
+	margin: 0 5rpx;
+}
+
+.chart-bar {
+	width: 30rpx;
+	margin: 0 auto 10rpx auto;
+	border-radius: 4rpx;
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	transition: all 0.3s ease;
+	
+	&.no-data {
+		background-color: #e5e7eb !important;
+		opacity: 0.5;
+	}
+}
+
+.bar-value {
+	position: absolute;
+	top: -30rpx;
+	font-size: 20rpx;
+	font-weight: bold;
+	color: var(--text-color);
+	white-space: nowrap;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+.bar-label {
+	font-size: 22rpx;
+	color: #6b7280;
+	font-weight: 500;
 }
 
 .empty-text {

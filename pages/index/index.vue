@@ -57,6 +57,7 @@
 			<!-- 添加训练按钮 -->
 			<view class="add-workout-btn">
 				<button class="btn btn-primary" @tap="recordWorkout">记录训练</button>
+				<button class="btn btn-success" @tap="completeTodayPlan">完成本日计划</button>
 			</view>
 			
 			<!-- 本周训练计划 -->
@@ -173,11 +174,18 @@
 				</view>
 				
 				<view class="modal-body">
+					<!-- 自定义动作输入 -->
+					<view class="form-group">
+						<text class="form-label">动作名称</text>
+						<input v-model="exerciseDetails.name" placeholder="请输入任意动作名称（可自定义）" class="form-input" />
+						<text class="form-hint">💡 您可以输入任何动作名称，不限于下方的选项</text>
+					</view>
+					
 					<!-- 动作选择 -->
 					<view class="form-group">
-						<text class="form-label">选择动作</text>
+						<text class="form-label">快速选择常用动作（可选）</text>
 						<view class="exercise-categories">
-							<view class="category" v-for="(exercises, category) in exerciseLibrary" :key="category">
+							<view class="category" v-for="(exercises, category) in exerciseLibrary" :key="category" v-if="exercises.length > 0">
 								<text class="category-name">{{category}}</text>
 								<view class="exercise-options">
 									<view class="exercise-option" 
@@ -271,7 +279,8 @@ export default {
 				腿部: ['杠铃深蹲', '前蹲', '哑铃深蹲', '腿举', '保加利亚深蹲', '罗马尼亚硬拉', '硬拉'],
 				肩部: ['杠铃肩推', '哑铃肩推', '侧平举', '前平举', '阿诺德推举', '倒立撑'],
 				手臂: ['杠铃弯举', '哑铃弯举', '锤式弯举', '窄距卧推', '三头肌下压', '臂屈伸'],
-				核心: ['平板支撑', '卷腹', '俄罗斯转体', '登山者', '死虫', '鸟狗式']
+				核心: ['平板支撑', '卷腹', '俄罗斯转体', '登山者', '死虫', '鸟狗式'],
+				自定义: []
 			}
 		}
 	},
@@ -295,6 +304,9 @@ export default {
 		
 		// 加载本周计划
 		this.loadWeeklyPlans();
+		
+		// 加载自定义动作
+		this.loadCustomExercises();
 	},
 	onMounted() {
 		// TabBar补丁 - 确保useShowTabBar不会报错
@@ -345,6 +357,156 @@ export default {
 			uni.navigateTo({
 				url: '/pages/record/record'
 			});
+		},
+		
+		// 完成本日计划
+		completeTodayPlan() {
+			// 获取今日日期
+			const today = new Date();
+			const todayDateStr = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
+			const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+			const todayDayName = dayNames[today.getDay()];
+			
+			// 获取用户的单天计划
+			const userInfo = uni.getStorageSync('userInfo');
+			const dailyPlansKey = userInfo && userInfo.id ? `dailyPlans_${userInfo.id}` : 'dailyPlans';
+			const dailyPlans = uni.getStorageSync(dailyPlansKey) || [];
+			
+			// 查找今日的计划
+			const todayPlan = dailyPlans.find(plan => plan.date === todayDateStr || plan.dayName === todayDayName);
+			
+			// 检查是否有计划
+			if (!todayPlan) {
+				uni.showToast({
+					title: '今天无计划',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+			
+			// 检查是否为休息日
+			if (todayPlan.restDay) {
+				uni.showToast({
+					title: '今天为休息日',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+			
+			// 检查是否有训练动作
+			if (!todayPlan.exercises || todayPlan.exercises.length === 0) {
+				uni.showToast({
+					title: '今天无训练动作',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+			
+			// 检查今日是否已经完成过计划
+			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			const todayFormatted = this.formatDate(today);
+			
+			const alreadyCompleted = workoutHistory.some(workout => 
+				workout.date === todayFormatted && workout.source === 'dailyPlan'
+			);
+			
+			if (alreadyCompleted) {
+				uni.showModal({
+					title: '提示',
+					content: '今日计划已完成，是否要重新记录？',
+					confirmText: '重新记录',
+					cancelText: '取消',
+					success: (res) => {
+						if (res.confirm) {
+							this.saveCompletedPlan(todayPlan, todayFormatted, todayDayName);
+						}
+					}
+				});
+				return;
+			}
+			
+			// 确认完成计划
+			const exerciseNames = todayPlan.exercises.map(ex => ex.name).join('、');
+			uni.showModal({
+				title: '完成本日计划',
+				content: `确认完成今日训练计划吗？\n\n训练内容：${exerciseNames}`,
+				confirmText: '完成',
+				cancelText: '取消',
+				success: (res) => {
+					if (res.confirm) {
+						this.saveCompletedPlan(todayPlan, todayFormatted, todayDayName);
+					}
+				}
+			});
+		},
+		
+		// 保存完成的计划到训练记录
+		saveCompletedPlan(todayPlan, dateFormatted, dayName) {
+			const userInfo = uni.getStorageSync('userInfo');
+			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+			let workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			
+			// 获取今日的完整日期（YYYY-MM-DD格式）
+			const today = new Date();
+			const fullDateStr = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
+			
+			// 删除今日已有的相同来源记录（如果重新记录）
+			workoutHistory = workoutHistory.filter(workout => 
+				!(workout.date === fullDateStr && workout.source === 'dailyPlan')
+			);
+			
+			// 转换动作格式以匹配记录页面的格式
+			const convertedExercises = todayPlan.exercises.map(exercise => ({
+				name: exercise.name,
+				totalSets: exercise.sets || 1, // 保存总组数
+				weight: exercise.weight || '',
+				reps: exercise.reps || 1,
+				rest: exercise.rest || 90,
+				notes: exercise.notes || '',
+				source: 'dailyPlan' // 标记来源为日计划
+			}));
+			
+			// 创建训练记录（使用与记录页面兼容的格式）
+			const workoutRecord = {
+				id: Date.now(),
+				name: '本日计划完成',
+				type: '计划训练',
+				date: fullDateStr, // 使用YYYY-MM-DD格式
+				startTime: today.getHours().toString().padStart(2, '0') + ':' + today.getMinutes().toString().padStart(2, '0'),
+				exercises: convertedExercises,
+				status: '已完成',
+				source: 'dailyPlan', // 标记来源为日计划
+				notes: todayPlan.notes || '完成本日训练计划'
+			};
+			
+			// 添加到训练记录
+			workoutHistory.unshift(workoutRecord);
+			uni.setStorageSync(workoutHistoryKey, workoutHistory);
+			
+			// 重新加载训练信息
+			this.loadTrainingInfo();
+			this.loadWeeklyPlans();
+			
+			uni.showToast({
+				title: '计划完成！已记录',
+				icon: 'success',
+				duration: 2000
+			});
+		},
+		
+		// 估算训练时长
+		estimateWorkoutDuration(exercises) {
+			if (!exercises || exercises.length === 0) {
+				return '0分钟';
+			}
+			
+			// 简单估算：每个动作平均3分钟（包括组间休息）
+			const estimatedMinutes = exercises.length * 3;
+			return `${estimatedMinutes}分钟`;
 		},
 		goToPlans() {
 			uni.reLaunch({
@@ -412,6 +574,8 @@ export default {
 			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
 			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			
+			console.log('加载训练记录:', workoutHistory);
+			
 			if (workoutHistory.length === 0) {
 				this.trainingInfo = {
 					thisWeek: '0 次训练',
@@ -424,13 +588,38 @@ export default {
 			const now = new Date();
 			const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 			const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 			
 			let thisMonthCount = 0;
 			let lastMonthCount = 0;
 			
 			workoutHistory.forEach(workout => {
-				const workoutDate = new Date(workout.date);
+				// 处理不同的日期格式
+				let workoutDate;
+				if (workout.date) {
+					// 优先使用date字段
+					if (workout.date.includes('-') && workout.date.length >= 8) {
+						// YYYY-MM-DD格式，直接解析
+						workoutDate = new Date(workout.date);
+					} else if (workout.date.includes('/') && workout.date.length <= 5) {
+						// MM/dd格式，补充当前年份
+						workoutDate = new Date(`${now.getFullYear()}/${workout.date}`);
+					} else {
+						// 其他格式尝试直接解析
+						workoutDate = new Date(workout.date);
+					}
+				} else if (workout.createdAt) {
+					// 如果没有date字段但有createdAt字段，使用它（ISO格式）
+					workoutDate = new Date(workout.createdAt);
+				} else {
+					console.warn('训练记录缺少日期信息:', workout);
+					return; // 跳过无效记录
+				}
+				
+				// 检查日期是否有效
+				if (isNaN(workoutDate.getTime())) {
+					console.warn('无效的训练记录日期:', workout);
+					return;
+				}
 				
 				if (workoutDate >= thisMonthStart) {
 					thisMonthCount++;
@@ -757,11 +946,14 @@ export default {
 		saveExercise() {
 			if (!this.exerciseDetails.name) {
 				uni.showToast({
-					title: '请选择动作',
+					title: '请输入动作名称',
 					icon: 'none'
 				});
 				return;
 			}
+			
+			// 保存自定义动作到全局动作库
+			this.saveCustomExercise(this.exerciseDetails.name.trim());
 			
 			const exercise = { ...this.exerciseDetails };
 			
@@ -798,6 +990,58 @@ export default {
 					}
 				}
 			});
+		},
+		
+		// 加载自定义动作
+		loadCustomExercises() {
+			// 获取用户存储键
+			const userInfo = uni.getStorageSync('userInfo');
+			const customExercisesKey = userInfo && userInfo.id ? `customExercises_${userInfo.id}` : 'customExercises';
+			
+			// 获取自定义动作
+			const customExercises = uni.getStorageSync(customExercisesKey) || [];
+			
+			// 更新动作库
+			this.exerciseLibrary.自定义 = customExercises;
+			
+			console.log('加载自定义动作:', customExercises);
+		},
+		
+		// 保存自定义动作到全局动作库
+		saveCustomExercise(exerciseName) {
+			if (!exerciseName || !exerciseName.trim()) {
+				return;
+			}
+			
+			const name = exerciseName.trim();
+			
+			// 检查是否已经在预设动作库中
+			const presetCategories = ['胸肌', '背部', '腿部', '肩部', '手臂', '核心'];
+			const isPresetExercise = presetCategories.some(category => 
+				this.exerciseLibrary[category].includes(name)
+			);
+			
+			if (isPresetExercise) {
+				return; // 如果是预设动作，不需要保存到自定义动作库
+			}
+			
+			// 获取用户存储键
+			const userInfo = uni.getStorageSync('userInfo');
+			const customExercisesKey = userInfo && userInfo.id ? `customExercises_${userInfo.id}` : 'customExercises';
+			
+			// 获取现有的自定义动作
+			let customExercises = uni.getStorageSync(customExercisesKey) || [];
+			
+			// 检查是否已存在
+			if (!customExercises.includes(name)) {
+				customExercises.push(name);
+				uni.setStorageSync(customExercisesKey, customExercises);
+				
+				// 更新当前页面的动作库显示
+				this.exerciseLibrary.自定义 = customExercises;
+				
+				console.log('保存自定义动作:', name);
+			}
 		},
 		handleDayCardClick(day) {
 			// 如果已有计划，可以查看或编辑；如果没有计划，则添加计划
@@ -985,6 +1229,10 @@ export default {
 
 .add-workout-btn {
 	margin-bottom: 40rpx;
+	display: flex;
+	gap: 20rpx;
+	justify-content: center;
+	align-items: center;
 }
 
 .section-title {
@@ -1347,6 +1595,15 @@ uni-modal, .uni-modal {
 	color: #ffffff;
 }
 
+.btn-success {
+	background-color: #10b981;
+	color: #ffffff;
+}
+
+.btn-success:hover {
+	background-color: #059669;
+}
+
 .btn-outline {
 	background-color: transparent;
 	color: #666;
@@ -1525,6 +1782,13 @@ uni-modal, .uni-modal {
 .form-textarea::placeholder {
 	color: #9ca3af;
 	font-size: 26rpx;
+}
+
+.form-hint {
+	font-size: 22rpx;
+	color: #6b7280;
+	margin-top: 8rpx;
+	line-height: 1.4;
 }
 
 .exercise-categories {

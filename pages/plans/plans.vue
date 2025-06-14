@@ -31,12 +31,7 @@
 							</picker>
 						</view>
 						
-						<view class="form-item">
-							<text class="form-label">目标</text>
-							<picker :value="goalIndex" :range="goals" @change="onGoalChange">
-								<view class="picker-value">{{goals[goalIndex]}}</view>
-							</picker>
-						</view>
+
 						
 						<view class="form-item">
 							<text class="form-label">每周训练天数</text>
@@ -109,7 +104,7 @@
 							<view class="flex-row justify-between align-center">
 								<text class="plan-progress">{{plan.progress}}</text>
 								<view class="plan-actions-vertical">
-									<text class="text-primary plan-action">{{plan.actionText}}</text>
+									<text class="text-primary plan-action" @tap.stop="handlePlanCardAction(plan)">{{plan.actionText}}</text>
 									<text class="delete-action" @tap.stop="deletePlan(plan, index)">删除计划</text>
 								</view>
 							</view>
@@ -119,6 +114,117 @@
 			</view>
 		</view>
 		
+		<!-- 计划详情弹窗 -->
+		<view class="modal" v-if="showPlanDetailModal" @tap.self="closePlanDetailModal">
+			<view class="modal-content plan-detail-modal">
+				<view class="modal-header">
+					<text class="modal-title">计划详情</text>
+					<view class="close-btn" @tap="closePlanDetailModal">×</view>
+				</view>
+				
+				<view class="modal-body plan-detail-body">
+					<view class="detail-section">
+						<text class="detail-title">基本信息</text>
+						<view class="detail-item">
+							<text class="detail-label">计划名称：</text>
+							<text class="detail-value">{{currentPlanDetail.title}}</text>
+						</view>
+						<view class="detail-item">
+							<text class="detail-label">计划目标：</text>
+							<text class="detail-value">{{currentPlanDetail.goal || '未设置'}}</text>
+						</view>
+						<view class="detail-item">
+							<text class="detail-label">训练水平：</text>
+							<text class="detail-value">{{currentPlanDetail.level || '未设置'}}</text>
+						</view>
+						<view class="detail-item">
+							<text class="detail-label">训练周期：</text>
+							<text class="detail-value">{{currentPlanDetail.duration || '未设置'}}</text>
+						</view>
+						<view class="detail-item">
+							<text class="detail-label">训练频率：</text>
+							<text class="detail-value">{{currentPlanDetail.trainingDays || '未设置'}}</text>
+						</view>
+						<view class="detail-item">
+							<text class="detail-label">当前状态：</text>
+							<text class="detail-value" :class="'status-' + currentPlanDetail.statusClass">{{currentPlanDetail.status}}</text>
+						</view>
+						<view class="detail-item">
+							<text class="detail-label">进度：</text>
+							<text class="detail-value">{{currentPlanDetail.progress}}</text>
+						</view>
+					</view>
+					
+					<!-- 系统生成的计划显示 -->
+					<view class="detail-section" v-if="currentPlanDetail.exercises && currentPlanDetail.exercises.length > 0">
+						<text class="detail-title">训练安排</text>
+						<view class="training-schedule">
+							<view class="day-schedule" v-for="(day, index) in currentPlanDetail.exercises" :key="index">
+								<view class="day-header">
+									<text class="day-name">{{day.day}}</text>
+									<text class="day-focus">{{day.focus}}</text>
+								</view>
+								<view class="exercise-list">
+									<view class="exercise-item" v-for="(exercise, exIndex) in day.exercises" :key="exIndex">
+										<text class="exercise-text">• {{getExerciseDisplayName(exercise)}}</text>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+					
+					<!-- 自定义计划显示 -->
+					<view class="detail-section" v-if="currentPlanDetail.customPlan && currentPlanDetail.weekPlans">
+						<view class="detail-header">
+							<text class="detail-title">训练安排</text>
+							<!-- 周切换按钮 -->
+							<view class="week-switcher" v-if="Object.keys(currentPlanDetail.weekPlans).length > 1">
+								<view class="week-tabs">
+									<view class="week-tab" 
+										v-for="weekNum in Object.keys(currentPlanDetail.weekPlans).sort((a, b) => parseInt(a) - parseInt(b))" 
+										:key="weekNum"
+										:class="{'active': currentViewWeek === parseInt(weekNum)}"
+										@tap="switchViewWeek(parseInt(weekNum))">
+										第{{weekNum}}周
+									</view>
+								</view>
+							</view>
+						</view>
+						<view class="training-schedule">
+							<view class="week-section">
+								<text class="week-title">第{{currentViewWeek}}周</text>
+								<view class="day-schedule" v-for="(dayTraining, dayName) in getCurrentWeekPlan()" :key="dayName">
+									<view class="day-header">
+										<text class="day-name">{{dayName}}</text>
+										<text class="day-focus" v-if="dayTraining.restDay">休息日</text>
+										<text class="day-focus" v-else-if="dayTraining.exercises && dayTraining.exercises.length > 0">{{dayTraining.exercises.length}}个动作</text>
+									</view>
+									<view class="exercise-list" v-if="!dayTraining.restDay && dayTraining.exercises && dayTraining.exercises.length > 0">
+										<view class="exercise-item" v-for="(exercise, exIndex) in dayTraining.exercises" :key="exIndex">
+											<text class="exercise-text">• {{getExerciseDisplayName(exercise)}}</text>
+										</view>
+									</view>
+									<view class="rest-day-note" v-if="dayTraining.restDay">
+										<text class="rest-text">今日休息</text>
+									</view>
+									<view class="day-notes" v-if="dayTraining.notes">
+										<text class="notes-text">备注：{{dayTraining.notes}}</text>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+				
+				<view class="modal-footer">
+					<button class="btn btn-outline" @tap="closePlanDetailModal">关闭</button>
+					<button class="btn btn-primary" @tap="handlePlanAction" v-if="currentPlanDetail.status">
+						{{currentPlanDetail.status === '未开始' ? '开始计划' : '查看进度'}}
+					</button>
+				</view>
+			</view>
+		</view>
+
 		<!-- 动作编辑弹窗 -->
 		<view class="modal" v-if="showExerciseEditModal" @tap.self="closeExerciseEditModal">
 			<view class="modal-content exercise-edit-modal">
@@ -130,7 +236,7 @@
 				<view class="modal-body">
 					<view class="form-group">
 						<text class="form-label">动作名称</text>
-						<input v-model="editingExercise.name" placeholder="请输入动作名称" class="form-input readonly-input" readonly disabled />
+						<input v-model="editingExercise.name" placeholder="请输入动作名称" class="form-input" />
 					</view>
 					
 					<!-- 组数设置 -->
@@ -278,16 +384,7 @@
 									<text class="status-text">未设置</text>
 								</view>
 								
-								<view class="day-preview" v-if="getDayPlan(customPlan.currentWeek, day) && !getDayPlan(customPlan.currentWeek, day).restDay">
-									<text class="exercise-preview" 
-										v-for="(exercise, exIndex) in getDayPlan(customPlan.currentWeek, day).exercises.slice(0, 2)" 
-										:key="exIndex">
-										{{exercise.name}}
-									</text>
-									<text class="more-exercises" v-if="getDayPlan(customPlan.currentWeek, day).exercises.length > 2">
-										...等{{getDayPlan(customPlan.currentWeek, day).exercises.length}}项
-									</text>
-								</view>
+								<!-- 不显示具体动作名称，只在状态中显示动作数量 -->
 							</view>
 						</view>
 					</view>
@@ -379,7 +476,13 @@
 				<view class="modal-body">
 					<!-- 动作选择 -->
 					<view class="form-group">
-						<text class="form-label">选择动作</text>
+						<text class="form-label">动作名称</text>
+						<input v-model="exerciseDetails.name" placeholder="请输入任意动作名称（可自定义）" class="form-input" />
+						<text class="form-hint">💡 您可以输入任何动作名称，不限于下方的选项</text>
+					</view>
+					
+					<view class="form-group">
+						<text class="form-label">快速选择常用动作（可选）</text>
 						<view class="exercise-categories">
 							<view class="category" v-for="(exercises, category) in exerciseLibrary" :key="category">
 								<text class="category-name">{{category}}</text>
@@ -442,8 +545,7 @@ import cloudDataService from '@/utils/cloudDataService.js';
 export default {
 	data() {
 		return {
-			goalIndex: 0,
-			goals: ['增肌', '减脂', '力量提升', '耐力训练'],
+
 			
 			daysIndex: 0,
 			trainingDays: ['3天', '4天', '5天', '6天'],
@@ -558,7 +660,12 @@ export default {
 					progress: '0周/共6周',
 					actionText: '开始计划'
 				}
-			]
+			],
+			
+			// 计划详情弹窗相关
+			showPlanDetailModal: false,
+			currentPlanDetail: {},
+			currentViewWeek: 1 // 当前查看的周数
 		}
 	},	onShow() {
 		// 页面显示时加载我的计划
@@ -584,13 +691,7 @@ export default {
 				icon: 'none'
 			});
 		},
-		onGoalChange(e) {
-			this.goalIndex = e.detail.value;
-			// 如果当前有预览，则自动更新预览
-			if (this.showPreview) {
-				this.updatePreview();
-			}
-		},
+
 		onDaysChange(e) {
 			this.daysIndex = e.detail.value;
 			// 如果当前有预览，则自动更新预览
@@ -677,20 +778,11 @@ export default {
 				return;
 			}
 			
-			// 获取原始动作名称（对于编辑操作，保持原始名称不变）
+			// 使用用户输入的动作名称（允许自定义动作名称）
 			let finalName = this.editingExercise.name.trim();
-			if (!this.isAddingExercise) {
-				// 编辑时，确保使用原始的纯净动作名称，不允许修改
-				const originalExercise = this.previewPlan[this.editingDayIndex].exercises[this.editingExerciseIndex];
-				if (originalExercise) {
-					finalName = typeof originalExercise === 'string' 
-						? this.extractPureName(originalExercise)
-						: this.extractPureName(originalExercise.name || originalExercise);
-				}
-			} else {
-				// 添加新动作时，允许使用输入的名称
-				finalName = this.extractPureName(finalName);
-			}
+			
+			// 保存自定义动作到全局动作库
+			this.saveCustomExercise(finalName);
 			
 			// 构造动作对象
 			const exerciseData = {
@@ -814,7 +906,7 @@ export default {
 			if (typeof exerciseStr === 'object') {
 				// 确保对象格式也有完整的属性
 				return {
-					name: exerciseStr.name || exerciseStr,
+					name: exerciseStr.name || exerciseStr.toString(),
 					sets: exerciseStr.sets || 3,
 					reps: exerciseStr.reps || 10,
 					rest: exerciseStr.rest || '90'
@@ -1253,15 +1345,50 @@ export default {
 			this.$forceUpdate();
 		},
 		
+		// 保存自定义动作到全局动作库
+		saveCustomExercise(exerciseName) {
+			if (!exerciseName || !exerciseName.trim()) {
+				return;
+			}
+			
+			const name = exerciseName.trim();
+			
+			// 检查是否已经在预设动作库中
+			const isPresetExercise = Object.values(this.exerciseLibrary).some(exercises => 
+				exercises.includes(name)
+			);
+			
+			if (isPresetExercise) {
+				return; // 如果是预设动作，不需要保存到自定义动作库
+			}
+			
+			// 获取用户存储键
+			const userInfo = uni.getStorageSync('userInfo');
+			const customExercisesKey = userInfo && userInfo.id ? `customExercises_${userInfo.id}` : 'customExercises';
+			
+			// 获取现有的自定义动作
+			let customExercises = uni.getStorageSync(customExercisesKey) || [];
+			
+			// 检查是否已存在
+			if (!customExercises.includes(name)) {
+				customExercises.push(name);
+				uni.setStorageSync(customExercisesKey, customExercises);
+				console.log('保存自定义动作:', name);
+			}
+		},
+		
 		// 保存动作
 		saveExercise() {
-			if (!this.exerciseDetails.name) {
+			if (!this.exerciseDetails.name || !this.exerciseDetails.name.trim()) {
 				uni.showToast({
-					title: '请选择动作',
+					title: '请输入动作名称',
 					icon: 'none'
 				});
 				return;
 			}
+			
+			// 保存自定义动作到全局动作库
+			this.saveCustomExercise(this.exerciseDetails.name.trim());
 			
 			const exercise = { ...this.exerciseDetails };
 			
@@ -1478,10 +1605,11 @@ export default {
 				exercises: this.newPlan.customSchedule // 保存详细的训练计划
 			};
 			
-			// 保存到本地存储
-			const savedPlans = uni.getStorageSync('myPlans') || [];
-			savedPlans.unshift(newPlanObj);
-			uni.setStorageSync('myPlans', savedPlans);
+							// 保存到本地存储
+				const myPlansKey = this.getUserStorageKey('myPlans');
+				const savedPlans = uni.getStorageSync(myPlansKey) || [];
+				savedPlans.unshift(newPlanObj);
+				uni.setStorageSync(myPlansKey, savedPlans);
 			
 			// 更新显示的计划列表
 			this.loadMyPlans();
@@ -1508,6 +1636,12 @@ export default {
 		},
 		generatePlan() {
 			// 模拟生成计划
+			console.log('生成计划参数：', {
+				训练天数: this.trainingDays[this.daysIndex],
+				训练水平: this.levels[this.levelIndex],
+				计划类型: this.planTypes[this.planTypeIndex]
+			});
+			
 			uni.showLoading({
 				title: '生成中...'
 			});
@@ -1515,17 +1649,21 @@ export default {
 			setTimeout(() => {
 				uni.hideLoading();
 				
-				// 根据目标、训练天数、训练水平生成计划
+				// 根据训练天数、训练水平生成计划
 				this.previewPlan = this.createPlanByParameters();
 				this.showPreview = true;
+				
+				console.log('生成的计划：', this.previewPlan);
 			}, 1500);
 		},
 		
 		createPlanByParameters() {
-			const goal = this.goalIndex; // 0:增肌, 1:减脂, 2:力量提升, 3:耐力训练
+			const goal = 0; // 默认增肌计划
 			const days = this.daysIndex; // 0:3天, 1:4天, 2:5天, 3:6天
 			const level = this.levelIndex; // 0:初级, 1:中级, 2:高级
 			const planType = this.planTypeIndex; // 0:一周计划, 1:长期计划
+			
+			console.log('创建计划参数检查：', { goal, days, level, planType });
 			
 			// 根据训练天数确定训练日程
 			const schedules = [
@@ -1541,15 +1679,7 @@ export default {
 			if (planType === 0) { // 一周计划
 				plan = this.generateWeeklyPlan(currentSchedule, goal, level);
 			} else { // 长期计划
-				if (goal === 0) { // 增肌计划
-					plan = this.generateMuscleGainPlan(currentSchedule, level);
-				} else if (goal === 1) { // 减脂计划
-					plan = this.generateFatLossPlan(currentSchedule, level);
-				} else if (goal === 2) { // 力量提升计划
-					plan = this.generateStrengthPlan(currentSchedule, level);
-				} else { // 耐力训练计划
-					plan = this.generateEndurancePlan(currentSchedule, level);
-				}
+				plan = this.generateMuscleGainPlan(currentSchedule, level);
 			}
 			
 			return plan;
@@ -1565,20 +1695,20 @@ export default {
 							{ day: '周一', focus: '上肢综合', exercises: [
 								{name: '俯卧撑', sets: 3, reps: 10, rest: '90'},
 								{name: '哑铃弯举', sets: 3, reps: 12, rest: '90'},
-								{name: '三头肌撑体', sets: 3, reps: 8, rest: '90'},
+								{name: '臂屈伸', sets: 3, reps: 8, rest: '90'},
 								{name: '侧平举', sets: 3, reps: 12, rest: '90'}
 							]},
 							{ day: '周三', focus: '下肢综合', exercises: [
-								{name: '徒手深蹲', sets: 3, reps: 15, rest: '90'},
-								{name: '弓步蹲', sets: 3, reps: 10, rest: '90'},
-								{name: '小腿提踵', sets: 3, reps: 18, rest: '90'},
-								{name: '臀桥', sets: 3, reps: 12, rest: '90'}
+								{name: '杠铃深蹲', sets: 3, reps: 15, rest: '90'},
+								{name: '保加利亚深蹲', sets: 3, reps: 10, rest: '90'},
+								{name: '哑铃深蹲', sets: 3, reps: 18, rest: '90'},
+								{name: '罗马尼亚硬拉', sets: 3, reps: 12, rest: '90'}
 							]},
 							{ day: '周五', focus: '核心全身', exercises: [
 								{name: '平板支撑', sets: 3, reps: 30, rest: '90'},
 								{name: '卷腹', sets: 3, reps: 15, rest: '90'},
 								{name: '俯卧撑', sets: 2, reps: 8, rest: '90'},
-								{name: '深蹲', sets: 2, reps: 12, rest: '90'}
+								{name: '杠铃深蹲', sets: 2, reps: 12, rest: '90'}
 							]}
 						],
 						4: [ // 4天
@@ -1588,12 +1718,12 @@ export default {
 								{name: '哑铃飞鸟', sets: 3, reps: 12, rest: '90'}
 							]},
 							{ day: '周二', focus: '背部', exercises: [
-								{name: '辅助引体向上', sets: 3, reps: 6, rest: '90'},
+								{name: '引体向上', sets: 3, reps: 6, rest: '90'},
 								{name: '哑铃划船', sets: 3, reps: 12, rest: '90'},
 								{name: '坐姿划船', sets: 3, reps: 12, rest: '90'}
 							]},
 							{ day: '周四', focus: '腿部', exercises: [
-								{name: '徒手深蹲', sets: 3, reps: 18, rest: '90'},
+								{name: '杠铃深蹲', sets: 3, reps: 18, rest: '90'},
 								{name: '哑铃深蹲', sets: 3, reps: 12, rest: '90'},
 								{name: '腿举', sets: 3, reps: 18, rest: '90'}
 							]},
@@ -1606,18 +1736,18 @@ export default {
 						],
 						5: [ // 5天
 							{ day: '周一', focus: '胸肌', exercises: ['俯卧撑 3组 x 8-12次', '哑铃卧推 3组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
-							{ day: '周二', focus: '背部', exercises: ['辅助引体向上 3组 x 5-8次', '哑铃划船 3组 x 10-12次', '坐姿划船 3组 x 12-15次'] },
-							{ day: '周三', focus: '腿部', exercises: ['徒手深蹲 3组 x 15-20次', '哑铃深蹲 3组 x 12-15次', '腿举 3组 x 15-20次', '腿弯举 3组 x 12次'] },
-							{ day: '周五', focus: '肩部', exercises: ['哑铃肩推 3组 x 10-12次', '侧平举 3组 x 12-15次', '前平举 3组 x 12次', '俯身飞鸟 3组 x 12次'] },
+							{ day: '周二', focus: '背部', exercises: ['引体向上 3组 x 5-8次', '哑铃划船 3组 x 10-12次', '坐姿划船 3组 x 12-15次'] },
+							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 3组 x 15-20次', '哑铃深蹲 3组 x 12-15次', '腿举 3组 x 15-20次', '罗马尼亚硬拉 3组 x 12次'] },
+							{ day: '周五', focus: '肩部', exercises: ['哑铃肩推 3组 x 10-12次', '侧平举 3组 x 12-15次', '前平举 3组 x 12次', '阿诺德推举 3组 x 12次'] },
 							{ day: '周六', focus: '手臂核心', exercises: ['哑铃弯举 3组 x 12-15次', '三头肌下压 3组 x 12-15次', '平板支撑 3组 x 45秒', '卷腹 3组 x 15次'] }
 						],
 						6: [ // 6天
 							{ day: '周一', focus: '胸肌', exercises: ['俯卧撑 3组 x 8-12次', '哑铃卧推 3组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
-							{ day: '周二', focus: '背部', exercises: ['辅助引体向上 3组 x 5-8次', '哑铃划船 3组 x 10-12次', '坐姿划船 3组 x 12-15次'] },
-							{ day: '周三', focus: '腿部', exercises: ['徒手深蹲 3组 x 15-20次', '哑铃深蹲 3组 x 12-15次', '腿举 3组 x 15-20次', '腿弯举 3组 x 12次'] },
-							{ day: '周四', focus: '肩部', exercises: ['哑铃肩推 3组 x 10-12次', '侧平举 3组 x 12-15次', '前平举 3组 x 12次', '俯身飞鸟 3组 x 12次'] },
-							{ day: '周五', focus: '手臂', exercises: ['哑铃弯举 3组 x 12-15次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12-15次', '三头肌撑体 3组 x 8-10次'] },
-							{ day: '周六', focus: '核心有氧', exercises: ['平板支撑 3组 x 45秒', '卷腹 3组 x 15次', '俄罗斯转体 3组 x 15次', '快走 20分钟'] }
+							{ day: '周二', focus: '背部', exercises: ['引体向上 3组 x 5-8次', '哑铃划船 3组 x 10-12次', '坐姿划船 3组 x 12-15次'] },
+							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 3组 x 15-20次', '哑铃深蹲 3组 x 12-15次', '腿举 3组 x 15-20次', '罗马尼亚硬拉 3组 x 12次'] },
+							{ day: '周四', focus: '肩部', exercises: ['哑铃肩推 3组 x 10-12次', '侧平举 3组 x 12-15次', '前平举 3组 x 12次', '阿诺德推举 3组 x 12次'] },
+							{ day: '周五', focus: '手臂', exercises: ['哑铃弯举 3组 x 12-15次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12-15次', '臂屈伸 3组 x 8-10次'] },
+							{ day: '周六', focus: '核心', exercises: ['平板支撑 3组 x 45秒', '卷腹 3组 x 15次', '俄罗斯转体 3组 x 15次', '登山者 3组 x 20次'] }
 						]
 					},
 					中级: {
@@ -1627,82 +1757,53 @@ export default {
 							{ day: '周五', focus: '肩部核心', exercises: ['杠铃肩推 4组 x 8-10次', '侧平举 3组 x 12-15次', '平板支撑 3组 x 60秒', '俄罗斯转体 3组 x 20次'] }
 						],
 						4: [
-							{ day: '周一', focus: '胸肩三头', exercises: ['杠铃卧推 4组 x 8-10次', '倾斜哑铃卧推 3组 x 10-12次', '肩推 4组 x 8-10次', '三头肌下压 3组 x 12-15次'] },
+							{ day: '周一', focus: '胸肩三头', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 3组 x 10-12次', '杠铃肩推 4组 x 8-10次', '三头肌下压 3组 x 12-15次'] },
 							{ day: '周二', focus: '背二头', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '哑铃划船 3组 x 10-12次', '杠铃弯举 4组 x 10-12次'] },
-							{ day: '周四', focus: '腿部训练', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '小腿提踵 4组 x 15-20次'] },
-							{ day: '周六', focus: '手臂专项', exercises: ['窄距卧推 4组 x 8-10次', '哑铃弯举 4组 x 10-12次', '锤式弯举 3组 x 12次', '三头肌伸展 3组 x 12次'] }
+							{ day: '周四', focus: '腿部训练', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '哑铃深蹲 4组 x 15-20次'] },
+							{ day: '周六', focus: '手臂专项', exercises: ['窄距卧推 4组 x 8-10次', '哑铃弯举 4组 x 10-12次', '锤式弯举 3组 x 12次', '臂屈伸 3组 x 12次'] }
 						],
 						5: [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '倾斜哑铃卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
 							{ day: '周二', focus: '背部', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '坐姿划船 3组 x 10-12次', '高位下拉 3组 x 12次'] },
-							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '腿弯举 3组 x 12次'] },
-							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '哑铃侧平举 4组 x 12-15次', '后束飞鸟 3组 x 15次', '直立划船 3组 x 12次'] },
+							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '保加利亚深蹲 3组 x 12次'] },
+							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '侧平举 4组 x 12-15次', '阿诺德推举 3组 x 15次', '前平举 3组 x 12次'] },
 							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] }
 						],
 						6: [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '倾斜哑铃卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次', '双杠臂屈伸 3组 x 8-12次'] },
 							{ day: '周二', focus: '背部', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '坐姿划船 3组 x 10-12次', '高位下拉 3组 x 12次'] },
-							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '保加利亚深蹲 3组 x 10-12次', '腿屈伸 3组 x 12-15次'] },
-							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '哑铃侧平举 4组 x 12-15次', '后束飞鸟 3组 x 15次', '直立划船 3组 x 12次'] },
+							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '保加利亚深蹲 3组 x 10-12次', '前蹲 3组 x 12-15次'] },
+							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '侧平举 4组 x 12-15次', '阿诺德推举 3组 x 15次', '前平举 3组 x 12次'] },
 							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] },
-							{ day: '周六', focus: '腿部 (后链)', exercises: ['罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '臀桥 3组 x 15-20次', '小腿提踵 4组 x 15-20次'] }
+							{ day: '周六', focus: '腿部 (后链)', exercises: ['罗马尼亚硬拉 4组 x 8-10次', '硬拉 4组 x 12-15次', '保加利亚深蹲 3组 x 15-20次', '哑铃深蹲 4组 x 15-20次'] }
 						]
 					},
 					高级: {
 						3: [
-							{ day: '周一', focus: '推力主导', exercises: ['杠铃卧推 5组 x 6-8次', '肩推 4组 x 8次', '倾斜卧推 4组 x 8-10次', '三头肌训练 4组'] },
-							{ day: '周三', focus: '拉力主导', exercises: ['硬拉 4组 x 6次', '引体向上 4组 x 8次', '杠铃划船 4组 x 8次', '二头肌训练 4组'] },
-							{ day: '周五', focus: '下肢主导', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 3组 x 8次', '罗马尼亚硬拉 4组 x 8次', '腿部辅助训练 3组'] }
+							{ day: '周一', focus: '推力主导', exercises: ['杠铃卧推 5组 x 6-8次', '杠铃肩推 4组 x 8次', '上斜卧推 4组 x 8-10次', '三头肌下压 4组 x 10次'] },
+							{ day: '周三', focus: '拉力主导', exercises: ['硬拉 4组 x 6次', '引体向上 4组 x 8次', '杠铃划船 4组 x 8次', '杠铃弯举 4组 x 10次'] },
+							{ day: '周五', focus: '下肢主导', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 3组 x 8次', '罗马尼亚硬拉 4组 x 8次', '腿举 3组 x 12次'] }
 						],
 						4: [
-							{ day: '周一', focus: '胸肌推力', exercises: ['杠铃卧推 5组 x 6-8次', '倾斜杠铃卧推 4组 x 8-10次', '双杠臂屈伸 4组 x 8-12次', '三头肌训练 3组'] },
-							{ day: '周二', focus: '背部拉力', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '二头肌训练 3组'] },
-							{ day: '周四', focus: '下肢力量', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '腿部辅助 3组'] },
+							{ day: '周一', focus: '胸肌推力', exercises: ['杠铃卧推 5组 x 6-8次', '上斜卧推 4组 x 8-10次', '双杠臂屈伸 4组 x 8-12次', '三头肌下压 3组 x 12次'] },
+							{ day: '周二', focus: '背部拉力', exercises: ['引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '哑铃划船 4组 x 8-10次', '杠铃弯举 3组 x 12次'] },
+							{ day: '周四', focus: '下肢力量', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '硬拉 4组 x 6-8次', '腿举 3组 x 12次'] },
 							{ day: '周六', focus: '肩部推力', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '侧平举 3组 x 12-15次'] }
 						],
 						5: [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
-							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
-							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '保加利亚深蹲 3组 x 10-12次'] },
-							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
-							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] }
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜卧推 4组 x 8-10次', '下斜卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周二', focus: '背部', exercises: ['引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
+							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '硬拉 4组 x 6-8次', '保加利亚深蹲 3组 x 10-12次'] },
+							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '阿诺德推举 3组 x 12-15次'] },
+							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '窄距卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '臂屈伸 3组 x 10-12次'] }
 						],
 						6: [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
-							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
-							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '腿屈伸 3组 x 12-15次'] },
-							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
-							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] },
-							{ day: '周六', focus: '腿部 (后链)', exercises: ['杠铃硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '小腿提踵 4组 x 15-20次'] }
-						]
-					},
-					高级: {
-						3: [
-							{ day: '周一', focus: '推力主导', exercises: ['杠铃卧推 5组 x 6-8次', '肩推 4组 x 8次', '倾斜卧推 4组 x 8-10次', '三头肌训练 4组'] },
-							{ day: '周三', focus: '拉力主导', exercises: ['硬拉 4组 x 6次', '引体向上 4组 x 8次', '杠铃划船 4组 x 8次', '二头肌训练 4组'] },
-							{ day: '周五', focus: '下肢主导', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 3组 x 8次', '罗马尼亚硬拉 4组 x 8次', '腿部辅助训练 3组'] }
-						],
-						4: [
-							{ day: '周一', focus: '胸肌推力', exercises: ['杠铃卧推 5组 x 6-8次', '倾斜杠铃卧推 4组 x 8-10次', '双杠臂屈伸 4组 x 8-12次', '三头肌训练 3组'] },
-							{ day: '周二', focus: '背部拉力', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '二头肌训练 3组'] },
-							{ day: '周四', focus: '下肢力量', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '腿部辅助 3组'] },
-							{ day: '周六', focus: '肩部推力', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '侧平举 3组 x 12-15次'] }
-						],
-						5: [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
-							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
-							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '杠铃硬拉 4组 x 6-8次', '保加利亚深蹲 3组 x 10-12次'] },
-							{ day: '周五', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
-							{ day: '周六', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] },
-							{ day: '周六', focus: '腿部 (后链)', exercises: ['杠铃硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '小腿提踵 4组 x 15-20次'] }
-						],
-						6: [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜杠铃卧推 4组 x 8-10次', '下斜哑铃卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
-							{ day: '周二', focus: '背部', exercises: ['加重引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '单臂哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
-							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '腿屈伸 3组 x 12-15次'] },
-							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '后束飞鸟 3组 x 12-15次'] },
-							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '近距离卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '三头肌伸展 3组 x 10-12次'] },
-							{ day: '周六', focus: '腿部 (后链)', exercises: ['杠铃硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '腿弯举 4组 x 12-15次', '小腿提踵 4组 x 15-20次'] }
+							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 5组 x 6-8次', '上斜卧推 4组 x 8-10次', '下斜卧推 4组 x 10-12次', '双杠臂屈伸 3组 x 8-12次'] },
+							{ day: '周二', focus: '背部', exercises: ['引体向上 5组 x 5-8次', 'T杠划船 4组 x 6-8次', '哑铃划船 4组 x 8-10次', '高位下拉 3组 x 10-12次'] },
+							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '保加利亚深蹲 3组 x 12-15次'] },
+							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 5组 x 6-8次', '哑铃肩推 4组 x 8-10次', '倒立撑 3组 x 5-8次', '阿诺德推举 3组 x 12-15次'] },
+							{ day: '周五', focus: '手臂', exercises: ['杠铃弯举 5组 x 6-8次', '窄距卧推 5组 x 6-8次', '锤式弯举 4组 x 8-10次', '臂屈伸 3组 x 10-12次'] },
+							{ day: '周六', focus: '腿部 (后链)', exercises: ['硬拉 4组 x 6-8次', '罗马尼亚硬拉 4组 x 8-10次', '保加利亚深蹲 4组 x 12-15次', '哑铃深蹲 4组 x 15-20次'] }
 						]
 					}
 				},
@@ -2154,6 +2255,7 @@ export default {
 			// 转换计划数据为对象格式
 			return this.convertPlanData(plan || []);
 		},		async savePlan() {
+			console.log('开始保存计划，预览计划：', this.previewPlan);
 			if (!this.previewPlan || this.previewPlan.length === 0) {
 				uni.showToast({
 					title: '请先生成计划',
@@ -2166,14 +2268,14 @@ export default {
 			const isWeeklyPlan = this.planTypeIndex === 0;
 			const planDuration = isWeeklyPlan ? '1周' : this.planWeeks[this.weeksIndex];
 			const planDescription = isWeeklyPlan 
-				? `一周${this.goals[this.goalIndex]}训练计划，每周训练${this.trainingDays[this.daysIndex]}，适合${this.levels[this.levelIndex]}训练者。`
-				: `${planDuration}的${this.goals[this.goalIndex]}训练计划，每周训练${this.trainingDays[this.daysIndex]}，适合${this.levels[this.levelIndex]}训练者。`;
+				? `一周增肌训练计划，每周训练${this.trainingDays[this.daysIndex]}，适合${this.levels[this.levelIndex]}训练者。`
+				: `${planDuration}的增肌训练计划，每周训练${this.trainingDays[this.daysIndex]}，适合${this.levels[this.levelIndex]}训练者。`;
 			
 			const newPlan = {
 				id: Date.now(),
-				title: `${this.goals[this.goalIndex]}计划`,
+				title: `增肌计划`,
 				description: planDescription,
-				goal: this.goals[this.goalIndex],
+				goal: '增肌',
 				level: this.levels[this.levelIndex],
 				planType: this.planTypes[this.planTypeIndex],
 				duration: planDuration,
@@ -2188,9 +2290,14 @@ export default {
 			
 			try {
 				// 保存到本地存储
-				const savedPlans = uni.getStorageSync('myPlans') || [];
+				const myPlansKey = this.getUserStorageKey('myPlans');
+				console.log('存储键：', myPlansKey);
+				const savedPlans = uni.getStorageSync(myPlansKey) || [];
+				console.log('现有计划：', savedPlans);
 				savedPlans.unshift(newPlan);
-				uni.setStorageSync('myPlans', savedPlans);
+				console.log('新计划对象：', newPlan);
+				uni.setStorageSync(myPlansKey, savedPlans);
+				console.log('保存后的计划：', savedPlans);
 				
 				// 尝试同步到云端
 				const userInfo = uni.getStorageSync('userInfo');
@@ -2206,6 +2313,7 @@ export default {
 				
 				// 更新显示的计划列表
 				this.loadMyPlans();
+				console.log('更新后的我的计划：', this.myPlans);
 				
 				// 重置预览状态
 				this.showPreview = false;
@@ -2225,48 +2333,96 @@ export default {
 			}
 		},
 		viewPlanDetails(plan) {
-			// 显示计划详情
-			let detailText = `计划名称：${plan.title}\n`;
-			detailText += `计划目标：${plan.goal || '未设置'}\n`;
-			detailText += `训练水平：${plan.level || '未设置'}\n`;
-			detailText += `训练周期：${plan.duration || '未设置'}\n`;
-			detailText += `训练频率：${plan.trainingDays || '未设置'}\n`;
-			detailText += `当前状态：${plan.status}\n`;
-			detailText += `进度：${plan.progress}\n\n`;
-			
-			if (plan.exercises && plan.exercises.length > 0) {
-				detailText += `训练安排：\n`;
-				plan.exercises.forEach((day, index) => {
-					detailText += `\n${day.day} - ${day.focus}:\n`;
-					day.exercises.forEach(exercise => {
-						detailText += `• ${exercise}\n`;
-					});
+			// 设置当前计划详情数据
+			this.currentPlanDetail = { ...plan };
+			// 重置查看周数为第1周
+			this.currentViewWeek = 1;
+			// 显示自定义计划详情弹窗
+			this.showPlanDetailModal = true;
+		},
+		
+		// 关闭计划详情弹窗
+		closePlanDetailModal() {
+			this.showPlanDetailModal = false;
+			this.currentPlanDetail = {};
+			this.currentViewWeek = 1;
+		},
+		
+		// 切换查看的周数
+		switchViewWeek(weekNum) {
+			this.currentViewWeek = weekNum;
+		},
+		
+		// 获取当前查看周的计划
+		getCurrentWeekPlan() {
+			if (this.currentPlanDetail.weekPlans && this.currentPlanDetail.weekPlans[this.currentViewWeek]) {
+				return this.currentPlanDetail.weekPlans[this.currentViewWeek];
+			}
+			return {};
+		},
+		
+		// 处理计划操作（开始计划或查看进度）
+		handlePlanAction() {
+			if (this.currentPlanDetail.status === '未开始') {
+				this.startPlan(this.currentPlanDetail);
+				this.closePlanDetailModal();
+			} else if (this.currentPlanDetail.status === '已暂停') {
+				this.startPlan(this.currentPlanDetail);
+				this.closePlanDetailModal();
+			} else {
+				uni.showToast({
+					title: '查看进度功能开发中',
+					icon: 'none'
 				});
 			}
-			
-			uni.showModal({
-				title: '计划详情',
-				content: detailText,
-				showCancel: true,
-				cancelText: '关闭',
-				confirmText: plan.status === '未开始' ? '开始计划' : '查看进度',
-				success: (res) => {
-					if (res.confirm) {
-						if (plan.status === '未开始') {
-							this.startPlan(plan);
-						} else {
-							uni.showToast({
-								title: '查看进度功能开发中',
-								icon: 'none'
-							});
-						}
-					}
-				}
-			});
+		},
+		
+		// 处理计划卡片的操作按钮点击
+		handlePlanCardAction(plan) {
+			if (plan.status === '未开始') {
+				// 开始计划
+				this.startPlan(plan);
+			} else if (plan.status === '已暂停') {
+				// 继续计划
+				this.startPlan(plan);
+			} else if (plan.status === '进行中') {
+				// 查看详情
+				this.viewPlanDetails(plan);
+			} else if (plan.status === '已完成') {
+				// 查看详情
+				this.viewPlanDetails(plan);
+			} else {
+				// 默认查看详情
+				this.viewPlanDetails(plan);
+			}
 		},
 		startPlan(plan) {
-			// 开始计划
-			const savedPlans = uni.getStorageSync('myPlans') || [];
+			// 检查是否已有进行中的计划
+			const myPlansKey = this.getUserStorageKey('myPlans');
+			const savedPlans = uni.getStorageSync(myPlansKey) || [];
+			
+			// 查找当前进行中的计划
+			const activePlan = savedPlans.find(p => p.status === '进行中');
+			
+			if (activePlan && activePlan.id !== plan.id) {
+				// 如果已有其他计划在进行中，显示提示
+				uni.showModal({
+					title: '提示',
+					content: `您当前正在进行"${activePlan.title}"计划。\n\n您只能同时进行一个计划。是否要停止当前计划并开始新计划？`,
+					confirmText: '切换计划',
+					cancelText: '取消',
+					confirmColor: '#3b82f6',
+					success: (res) => {
+						if (res.confirm) {
+							// 用户确认切换计划
+							this.switchPlan(activePlan, plan);
+						}
+					}
+				});
+				return;
+			}
+			
+			// 如果没有进行中的计划，或者是同一个计划，直接开始
 			const planIndex = savedPlans.findIndex(p => p.id === plan.id);
 			
 			if (planIndex !== -1) {
@@ -2275,8 +2431,11 @@ export default {
 				savedPlans[planIndex].actionText = '查看详情';
 				savedPlans[planIndex].startDate = new Date().toISOString().split('T')[0];
 				
-				uni.setStorageSync('myPlans', savedPlans);
+				uni.setStorageSync(myPlansKey, savedPlans);
 				this.loadMyPlans();
+				
+				// 同步计划到首页的本周训练计划
+				this.syncPlanToWeeklySchedule(savedPlans[planIndex]);
 				
 				uni.showToast({
 					title: '计划已开始！',
@@ -2284,35 +2443,151 @@ export default {
 				});
 			}
 		},
+		
+		// 切换计划方法
+		switchPlan(currentPlan, newPlan) {
+			const myPlansKey = this.getUserStorageKey('myPlans');
+			const savedPlans = uni.getStorageSync(myPlansKey) || [];
+			
+			// 停止当前计划
+			const currentPlanIndex = savedPlans.findIndex(p => p.id === currentPlan.id);
+			if (currentPlanIndex !== -1) {
+				savedPlans[currentPlanIndex].status = '已暂停';
+				savedPlans[currentPlanIndex].statusClass = 'paused';
+				savedPlans[currentPlanIndex].actionText = '继续计划';
+				savedPlans[currentPlanIndex].pausedDate = new Date().toISOString().split('T')[0];
+			}
+			
+			// 开始新计划
+			const newPlanIndex = savedPlans.findIndex(p => p.id === newPlan.id);
+			if (newPlanIndex !== -1) {
+				savedPlans[newPlanIndex].status = '进行中';
+				savedPlans[newPlanIndex].statusClass = 'primary';
+				savedPlans[newPlanIndex].actionText = '查看详情';
+				savedPlans[newPlanIndex].startDate = new Date().toISOString().split('T')[0];
+			}
+			
+			// 保存更改
+			uni.setStorageSync(myPlansKey, savedPlans);
+			this.loadMyPlans();
+			
+			// 同步新计划到首页的本周训练计划
+			this.syncPlanToWeeklySchedule(savedPlans[newPlanIndex]);
+			
+			uni.showToast({
+				title: `已切换到"${newPlan.title}"`,
+				icon: 'success',
+				duration: 2000
+			});
+		},
+		
+		// 获取用户存储键
+		getUserStorageKey(key) {
+			const userInfo = uni.getStorageSync('userInfo');
+			return userInfo && userInfo.id ? `${key}_${userInfo.id}` : key;
+		},
+		
+		// 同步计划到首页的本周训练计划
+		syncPlanToWeeklySchedule(plan) {
+			// 获取用户信息
+			const dailyPlansKey = this.getUserStorageKey('dailyPlans');
+			
+			// 清除现有的每日计划（如果需要的话）
+			uni.removeStorageSync(dailyPlansKey);
+			
+			let dailyPlans = [];
+			
+			// 计算本周的日期范围
+			const now = new Date();
+			const currentDay = now.getDay();
+			const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+			const mondayDate = new Date(now.getTime() + mondayOffset * 24 * 60 * 60 * 1000);
+			
+			// 如果计划有weekPlans结构（自定义计划）
+			if (plan.weekPlans && plan.weekPlans[1]) {
+				const weekPlan = plan.weekPlans[1]; // 使用第一周的计划
+				const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+				
+				dayNames.forEach((dayName, index) => {
+					const date = new Date(mondayDate.getTime() + index * 24 * 60 * 60 * 1000);
+					const fullDateStr = date.getFullYear() + '-' + (date.getMonth() + 1).toString().padStart(2, '0') + '-' + date.getDate().toString().padStart(2, '0');
+					
+					const dayTraining = weekPlan[dayName];
+					if (dayTraining) {
+						const dayPlan = {
+							date: fullDateStr,
+							dayName: dayName,
+							restDay: dayTraining.restDay || false,
+							exercises: dayTraining.exercises || [],
+							notes: dayTraining.notes || ''
+						};
+						dailyPlans.push(dayPlan);
+					}
+				});
+			}
+			// 如果计划有exercises结构（系统生成的计划）
+			else if (plan.exercises && plan.exercises.length > 0) {
+				// 按训练天分配计划
+				plan.exercises.forEach((dayPlan, dayIndex) => {
+					if (dayPlan && dayPlan.day && dayPlan.exercises) {
+						const dayName = dayPlan.day;
+						// 查找对应的日期
+						const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+						const targetDayIndex = dayNames.indexOf(dayName);
+						
+						if (targetDayIndex !== -1) {
+							const date = new Date(mondayDate.getTime() + targetDayIndex * 24 * 60 * 60 * 1000);
+							const fullDateStr = date.getFullYear() + '-' + (date.getMonth() + 1).toString().padStart(2, '0') + '-' + date.getDate().toString().padStart(2, '0');
+							
+							// 转换动作数据
+							const exercises = dayPlan.exercises.map(exercise => {
+								// 如果exercise是字符串，转换为对象
+								if (typeof exercise === 'string') {
+									return this.convertExerciseToObject(exercise);
+								} else if (typeof exercise === 'object' && exercise.name) {
+									return {
+										name: exercise.name,
+										sets: exercise.sets || 3,
+										reps: exercise.reps || 12,
+										weight: exercise.weight || '',
+										rest: exercise.rest || 90,
+										notes: exercise.notes || ''
+									};
+								}
+								return exercise;
+							});
+							
+							const syncDayPlan = {
+								date: fullDateStr,
+								dayName: dayName,
+								restDay: false,
+								exercises: exercises,
+								notes: dayPlan.focus || ''
+							};
+							dailyPlans.push(syncDayPlan);
+						}
+					}
+				});
+			}
+			
+			// 保存到本地存储
+			if (dailyPlans.length > 0) {
+				uni.setStorageSync(dailyPlansKey, dailyPlans);
+				console.log('计划已同步到本周训练计划，共同步', dailyPlans.length, '天');
+			} else {
+				console.log('没有找到可同步的计划数据');
+			}
+		},
 		loadMyPlans() {
 			// 从本地存储加载我的计划
-			const savedPlans = uni.getStorageSync('myPlans') || [];
+			const myPlansKey = this.getUserStorageKey('myPlans');
+			console.log('loadMyPlans - 存储键：', myPlansKey);
+			const savedPlans = uni.getStorageSync(myPlansKey) || [];
+			console.log('loadMyPlans - 从存储加载的计划：', savedPlans);
 			
-			// 如果没有保存的计划，使用默认的示例计划
-			if (savedPlans.length === 0) {
-				this.myPlans = [
-					{
-						id: 1,
-						title: '12周增肌计划',
-						description: '专注于渐进式超负荷的增肌训练计划。',
-						status: '进行中',
-						statusClass: 'primary',
-						progress: '第4周/共12周',
-						actionText: '查看详情'
-					},
-					{
-						id: 2,
-						title: '8周减脂计划',
-						description: '结合力量训练和HIIT的减脂计划。',
-						status: '已完成',
-						statusClass: 'success',
-						progress: '8周/共8周',
-						actionText: '查看详情'
-					}
-				];
-			} else {
-				this.myPlans = savedPlans;
-			}
+			// 直接使用从存储加载的计划，如果没有则为空数组
+			this.myPlans = savedPlans;
+			console.log('loadMyPlans - 设置我的计划为：', this.myPlans);
 		},
 				// 删除计划
 		deletePlan(plan, index) {
@@ -2327,7 +2602,8 @@ export default {
 						this.myPlans.splice(index, 1);
 						
 						// 更新本地存储
-						uni.setStorageSync('myPlans', this.myPlans);
+						const myPlansKey = this.getUserStorageKey('myPlans');
+						uni.setStorageSync(myPlansKey, this.myPlans);
 						
 						uni.showToast({
 							title: '计划已删除',
@@ -2368,7 +2644,8 @@ export default {
 				}
 				
 				// 获取本地数据
-				const localPlans = uni.getStorageSync('myPlans') || [];
+				const myPlansKey = this.getUserStorageKey('myPlans');
+				const localPlans = uni.getStorageSync(myPlansKey) || [];
 				
 				// 上传到云端
 				if (localPlans.length > 0) {
@@ -2382,7 +2659,7 @@ export default {
 				const mergedPlans = this.mergePlansData(localPlans, cloudPlans);
 				
 				// 保存合并后的数据
-				uni.setStorageSync('myPlans', mergedPlans);
+				uni.setStorageSync(myPlansKey, mergedPlans);
 				this.myPlans = mergedPlans;
 				
 				this.syncStatus.icon = 'sync-connected';
@@ -2778,6 +3055,11 @@ export default {
 }
 
 .badge-warning {
+	background-color: rgba(245, 158, 11, 0.1);
+	color: var(--warning-color);
+}
+
+.badge-paused {
 	background-color: rgba(245, 158, 11, 0.1);
 	color: var(--warning-color);
 }
@@ -3655,5 +3937,234 @@ page {
 		font-size: 24rpx;
 		padding: 8rpx 14rpx;
 	}
+}
+
+/* 提示文本样式 */
+.form-hint {
+	font-size: 22rpx;
+	color: #6b7280;
+	margin-top: 8rpx;
+	line-height: 1.4;
+	background-color: #f0f9ff;
+	padding: 8rpx 12rpx;
+	border-radius: 6rpx;
+	border-left: 3rpx solid #3b82f6;
+}
+
+/* 计划详情弹窗样式 */
+.plan-detail-modal {
+	width: 95%;
+	max-width: 1000rpx;
+	max-height: 85vh;
+	overflow-y: auto;
+}
+
+.plan-detail-body {
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.detail-section {
+	margin-bottom: 30rpx;
+}
+
+.detail-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #333;
+	margin-bottom: 20rpx;
+	padding-bottom: 10rpx;
+	border-bottom: 2rpx solid #e2e8f0;
+	display: block;
+}
+
+.detail-item {
+	display: flex;
+	align-items: flex-start;
+	margin-bottom: 16rpx;
+	line-height: 1.5;
+}
+
+.detail-label {
+	font-size: 28rpx;
+	color: #6b7280;
+	min-width: 160rpx;
+	flex-shrink: 0;
+}
+
+.detail-value {
+	font-size: 28rpx;
+	color: #333;
+	flex: 1;
+	word-break: break-all;
+}
+
+.detail-value.status-primary {
+	color: #3b82f6;
+	font-weight: 600;
+}
+
+.detail-value.status-success {
+	color: #10b981;
+	font-weight: 600;
+}
+
+.detail-value.status-warning {
+	color: #f59e0b;
+	font-weight: 600;
+}
+
+.detail-value.status-paused {
+	color: #f59e0b;
+	font-weight: 600;
+}
+
+.training-schedule {
+	background-color: #f8fafc;
+	border-radius: 12rpx;
+	padding: 20rpx;
+}
+
+.day-schedule {
+	margin-bottom: 24rpx;
+	background-color: white;
+	border-radius: 8rpx;
+	padding: 16rpx;
+	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+
+.day-schedule:last-child {
+	margin-bottom: 0;
+}
+
+.day-header {
+	display: flex;
+	align-items: center;
+	margin-bottom: 12rpx;
+	padding-bottom: 8rpx;
+	border-bottom: 1rpx solid #e5e7eb;
+}
+
+.day-name {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #3b82f6;
+	margin-right: 16rpx;
+}
+
+.day-focus {
+	font-size: 24rpx;
+	color: #6b7280;
+	background-color: #f3f4f6;
+	padding: 4rpx 12rpx;
+	border-radius: 12rpx;
+}
+
+.exercise-list {
+	margin-top: 8rpx;
+}
+
+.exercise-item {
+	margin-bottom: 8rpx;
+}
+
+.exercise-text {
+	font-size: 26rpx;
+	color: #374151;
+	line-height: 1.6;
+	word-break: break-all;
+	white-space: pre-wrap;
+}
+
+/* 自定义计划详情样式 */
+.detail-header {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 20rpx;
+}
+
+.week-switcher {
+	margin-top: 15rpx;
+}
+
+.week-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	background-color: #f8fafc;
+	padding: 8rpx;
+	border-radius: 12rpx;
+}
+
+.week-tab {
+	flex: 1;
+	min-width: 120rpx;
+	padding: 12rpx 20rpx;
+	text-align: center;
+	font-size: 26rpx;
+	color: #6b7280;
+	background-color: #fff;
+	border-radius: 8rpx;
+	border: 2rpx solid transparent;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.1);
+}
+
+.week-tab:hover {
+	background-color: #f0f9ff;
+	color: #3b82f6;
+}
+
+.week-tab.active {
+	background-color: var(--primary-color);
+	color: #fff;
+	border-color: var(--primary-color);
+	box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.3);
+	transform: translateY(-1rpx);
+}
+
+.week-section {
+	margin-bottom: 30rpx;
+}
+
+.week-title {
+	font-size: 32rpx;
+	font-weight: bold;
+	color: var(--primary-color);
+	margin-bottom: 15rpx;
+	display: block;
+	background-color: #e0f2fe;
+	padding: 12rpx 16rpx;
+	border-radius: 8rpx;
+	border-left: 4rpx solid var(--primary-color);
+}
+
+.rest-day-note {
+	text-align: center;
+	padding: 16rpx;
+	background-color: #f0f9ff;
+	border-radius: 8rpx;
+	margin-top: 8rpx;
+}
+
+.rest-text {
+	font-size: 26rpx;
+	color: #6b7280;
+	font-style: italic;
+}
+
+.day-notes {
+	margin-top: 12rpx;
+	padding: 12rpx;
+	background-color: #fffbeb;
+	border-radius: 6rpx;
+	border-left: 3rpx solid #f59e0b;
+}
+
+.notes-text {
+	font-size: 24rpx;
+	color: #92400e;
+	line-height: 1.5;
 }
 </style>
