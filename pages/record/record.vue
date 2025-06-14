@@ -72,15 +72,15 @@
 						</view>
 						
 						<view class="sets-config">
-							<view class="config-item">
+							<view class="config-item" v-if="!isBodyweightExercise(exercise.name)">
 								<text class="config-label">重量(kg)</text>
 								<input 
 									type="number" 
 									class="input-sm" 
 									v-model="exercise.weight" 
-									placeholder="重量" 
+									placeholder="必填" 
 									@input="validatePositiveInteger($event, 'weight', index)"
-									min="1"
+									min="0"
 								/>
 							</view>
 							<view class="config-item">
@@ -208,15 +208,15 @@
 					</view>
 					
 					<!-- 重量设置 -->
-					<view class="edit-form-group">
+					<view class="edit-form-group" v-if="editingExerciseIndex >= 0 && !isBodyweightExercise(selectedExercises[editingExerciseIndex].name)">
 						<text class="edit-form-label">重量 (kg)</text>
 						<input 
 							type="number" 
 							class="edit-input" 
 							v-model="editingExercise.weight" 
-							placeholder="请输入重量"
+							placeholder="必填"
 							@input="validateEditPositiveInteger($event, 'weight')"
-							min="1"
+							min="0"
 						/>
 					</view>
 					
@@ -626,6 +626,12 @@ export default {
 			});
 		},
 		
+		// 判断动作是否为自重动作
+		isBodyweightExercise(exerciseName) {
+			const exercise = this.exerciseDatabase.find(ex => ex.name === exerciseName);
+			return exercise && exercise.tags.includes('自重');
+		},
+		
 		// 训练信息相关方法
 
 		
@@ -649,7 +655,7 @@ export default {
 				description: exercise.description,
 				category: exercise.category,
 				setsCount: 1, // 默认1组
-				weight: '',
+				weight: this.isBodyweightExercise(exercise.name) ? '' : '', // 自重动作不需要重量
 				reps: '',
 				rest: '90',
 				notes: ''
@@ -875,15 +881,29 @@ export default {
 			
 			// 验证每个动作的数据
 			let hasInvalidData = false;
+			let missingFields = [];
+			
 			this.selectedExercises.forEach(exercise => {
-				if (!exercise.weight || !exercise.reps) {
+				// 次数必填
+				if (!exercise.reps) {
 					hasInvalidData = true;
+					if (!missingFields.includes('次数')) {
+						missingFields.push('次数');
+					}
+				}
+				
+				// 器械动作重量必填
+				if (!this.isBodyweightExercise(exercise.name) && !exercise.weight) {
+					hasInvalidData = true;
+					if (!missingFields.includes('重量')) {
+						missingFields.push('重量');
+					}
 				}
 			});
 			
 			if (hasInvalidData) {
 				uni.showToast({
-					title: '请完善所有动作的重量和次数',
+					title: `请完善所有动作的${missingFields.join('和')}`,
 					icon: 'none'
 				});
 				return;
@@ -901,11 +921,17 @@ export default {
 					// 根据组数创建sets数组
 					const sets = [];
 					for (let i = 0; i < exercise.setsCount; i++) {
-						sets.push({
-							weight: exercise.weight,
+						const setData = {
 							reps: exercise.reps,
 							rest: exercise.rest
-						});
+						};
+						
+						// 只有非自重动作才保存重量
+						if (!this.isBodyweightExercise(exercise.name) && exercise.weight) {
+							setData.weight = exercise.weight;
+						}
+						
+						sets.push(setData);
 					}
 					
 					return {
@@ -981,39 +1007,39 @@ export default {
 			
 			// 动作名称映射（与进度页面保持一致）
 			const exerciseMapping = {
-				'杠铃卧推': '卧推',
-				'哑铃卧推': '卧推',
-				'上斜卧推': '卧推',
-				'下斜卧推': '卧推',
+				'杠铃卧推': '杠铃卧推',
+				'哑铃卧推': '哑铃卧推',
+				'上斜卧推': '上斜卧推',
+				'下斜卧推': '下斜卧推',
 				'哑铃飞鸟': '哑铃飞鸟',
 				'俯卧撑': '俯卧撑',
 				'双杠臂屈伸': '双杠臂屈伸',
 				'引体向上': '引体向上',
 				'杠铃划船': '杠铃划船',
-				'哑铃划船': '杠铃划船',
+				'哑铃划船': '哑铃划船',
 				'高位下拉': '高位下拉',
-				'坐姿划船': '杠铃划船',
-				'T杠划船': '杠铃划船',
+				'坐姿划船': '坐姿划船',
+				'T杠划船': 'T杠划船',
 				'面拉': '面拉',
-				'杠铃深蹲': '深蹲',
-				'前蹲': '深蹲',
-				'哑铃深蹲': '深蹲',
-				'保加利亚深蹲': '深蹲',
+				'杠铃深蹲': '杠铃深蹲',
+				'前蹲': '前蹲',
+				'哑铃深蹲': '哑铃深蹲',
+				'保加利亚深蹲': '保加利亚深蹲',
 				'腿举': '腿举',
-				'罗马尼亚硬拉': '硬拉',
+				'罗马尼亚硬拉': '罗马尼亚硬拉',
 				'硬拉': '硬拉',
-				'杠铃肩推': '肩推',
-				'哑铃肩推': '肩推',
+				'杠铃肩推': '杠铃肩推',
+				'哑铃肩推': '哑铃肩推',
 				'侧平举': '侧平举',
 				'前平举': '前平举',
-				'阿诺德推举': '肩推',
+				'阿诺德推举': '阿诺德推举',
 				'倒立撑': '倒立撑',
 				'杠铃弯举': '杠铃弯举',
-				'哑铃弯举': '杠铃弯举',
-				'锤式弯举': '杠铃弯举',
+				'哑铃弯举': '哑铃弯举',
+				'锤式弯举': '锤式弯举',
 				'窄距卧推': '窄距卧推',
 				'三头肌下压': '三头肌下压',
-				'臂屈伸': '三头肌下压',
+				'臂屈伸': '臂屈伸',
 				'平板支撑': '平板支撑',
 				'卷腹': '卷腹',
 				'俄罗斯转体': '俄罗斯转体',

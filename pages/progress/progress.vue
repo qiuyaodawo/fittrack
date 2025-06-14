@@ -15,82 +15,116 @@
 		</view>
 		
 		<view class="content-container">
-			<view class="stats-grid">
+			<!-- 上方并排布局 -->
+			<view class="top-row">
 				<view class="card stat-card">
-					<text class="stat-card-title">个人记录</text>
-					<view class="personal-records" v-if="personalRecords.length > 0">
-						<view class="pr-item" v-for="(record, index) in personalRecords" :key="index">
-							<text class="pr-exercise">{{record.exercise}}</text>
-							<text class="pr-weight">{{record.weight}}</text>
-							<text class="pr-date">{{record.date}}</text>
-						</view>
-					</view>
-					<view class="empty-records" v-else>
-						<text class="empty-text">暂无个人记录</text>
-						<text class="empty-desc">完成训练后会自动更新记录</text>
-					</view>
-				</view>
-				
-				<view class="card stat-card">
-					<text class="stat-card-title">力量进步</text>
-					<view class="strength-stats" v-if="strengthProgress.length > 0">
-						<view class="strength-item" v-for="(progress, index) in strengthProgress" :key="index">
-							<text class="strength-label">{{progress.exercise}} 1RM</text>
-							<text class="strength-value">
-								{{progress.current}} 
-								<text :class="progress.change > 0 ? 'text-success gain' : progress.change < 0 ? 'text-error loss' : 'text-gray'" v-if="progress.change !== 0">
-									{{progress.change > 0 ? '+' : ''}}{{progress.change}} kg
+					<text class="stat-card-title">体重变化</text>
+					<view class="weight-content" v-if="weightChangeInfo.current">
+						<view class="pr-item">
+							<text class="pr-exercise">当前体重</text>
+							<view class="pr-weight-info">
+								<text class="pr-weight">
+									{{weightChangeInfo.current}} kg
+									<text :class="weightChangeInfo.change > 0 ? 'text-error pr-change' : weightChangeInfo.change < 0 ? 'text-success pr-change' : 'text-gray pr-change'" v-if="weightChangeInfo.change !== null && weightChangeInfo.change !== 0">
+										{{weightChangeInfo.change > 0 ? ' +' : ' '}}{{weightChangeInfo.change}} kg
+									</text>
 								</text>
-							</text>
+							</view>
+							<text class="pr-date">{{weightChangeInfo.date}}</text>
+						</view>
+						
+						<!-- 近7天体重变化折线图 -->
+						<view class="weight-chart" v-if="weightChangeInfo.chartData.length > 0">
+							<text class="chart-title">近7天变化</text>
+							<view class="line-chart">
+								<view class="chart-container">
+									<!-- 背景网格 -->
+									<view class="chart-grid"></view>
+									
+									<!-- 数据点 -->
+									<view 
+										class="chart-point" 
+										v-for="(item, index) in getValidDataPoints()" 
+										:key="index"
+										:style="getPointStyle(item.item, item.originalIndex)"
+									>
+										<view class="point-tooltip">{{item.item.weight}}kg</view>
+									</view>
+									
+									<!-- 连接线 -->
+									<view 
+										class="chart-line-segment"
+										v-for="(line, index) in getLineSegments()"
+										:key="index"
+										:style="line.style"
+									></view>
+								</view>
+								
+								<!-- 日期标签 -->
+								<view class="chart-labels">
+									<view 
+										class="chart-label" 
+										v-for="(item, index) in weightChangeInfo.chartData" 
+										:key="index"
+									>
+										{{item.dateLabel}}
+									</view>
+								</view>
+							</view>
 						</view>
 					</view>
 					<view class="empty-records" v-else>
-						<text class="empty-text">暂无力量数据</text>
-						<text class="empty-desc">记录训练数据后会显示进步情况</text>
+						<text class="empty-text">暂无体重记录</text>
+						<text class="empty-desc">记录体重后会显示变化情况</text>
 					</view>
 				</view>
 				
-				<view class="card stat-card">
-					<text class="stat-card-title">训练频率</text>
-					<view class="stat-card-info">
-						<view class="stat-info-item">
-							<text class="stat-info-label">本月训练</text>
-							<text class="stat-info-value">{{trainingStats.thisMonth}} 次</text>
+				<view class="card weekly-body-parts">
+					<view class="flex-row justify-between align-center">
+						<text class="section-title">本周锻炼部位</text>
+						<text class="week-range">{{currentWeekRange}}</text>
+					</view>
+					
+					<view class="body-parts-list">
+						<view class="body-part-item" v-for="(part, index) in weeklyBodyParts" :key="index">
+							<view class="body-part-info">
+								<text class="body-part-name">{{part.name}}</text>
+								<text class="body-part-count">{{part.count}} 次</text>
+							</view>
 						</view>
-						<view class="stat-info-item">
-							<text class="stat-info-label">总训练次数</text>
-							<text class="stat-info-value text-success">{{trainingStats.total}} 次</text>
-						</view>
+					</view>
+					
+					<view class="weekly-summary" v-if="weeklyBodyParts.length > 0">
+						<text class="summary-text">本周共锻炼 {{totalWorkouts}} 次，涉及 {{trainedBodyParts}} 个部位</text>
+					</view>
+					
+					<view class="empty-state" v-else>
+						<text class="empty-text">本周还没有训练记录</text>
+						<text class="empty-desc">开始训练来记录锻炼部位吧</text>
 					</view>
 				</view>
 			</view>
 			
-			<view class="card workout-log">
-				<view class="flex-row justify-between align-center">
-					<text class="section-title">训练记录</text>
-					<button class="btn-sm btn-primary" @tap="addWorkoutLog">添加记录</button>
-				</view>
-				
-				<view class="workout-table">
-					<view class="table-header">
-						<view class="th th-date">日期</view>
-						<view class="th th-type">训练类型</view>
-						<view class="th th-status">状态</view>
-						<view class="th th-action">操作</view>
-					</view>
-					
-					<view class="table-body">
-						<view class="table-row" v-for="(log, index) in workoutLogs" :key="index">
-							<view class="td td-date">{{log.date}}</view>
-							<view class="td td-type">{{log.type}}</view>
-							<view class="td td-status">
-								<view class="badge badge-success">{{log.status}}</view>
-							</view>
-							<view class="td td-action">
-								<text class="text-primary" @tap="viewLogDetails(log)">详情</text>
-							</view>
+			<!-- 个人记录卡片 -->
+			<view class="card stat-card">
+				<text class="stat-card-title">个人记录</text>
+				<view class="personal-records" v-if="personalRecords.length > 0">
+					<view class="pr-item" v-for="(record, index) in personalRecords" :key="index">
+						<text class="pr-exercise">{{record.exercise}}</text>
+						<view class="pr-weight-info">
+							<text class="pr-weight">
+								{{record.weight}}
+								<text :class="record.change > 0 ? 'text-success pr-change' : record.change < 0 ? 'text-error pr-change' : 'text-gray pr-change'" v-if="record.change !== undefined && record.change !== 0">
+									{{record.change > 0 ? ' +' : ' '}}{{record.change}} kg
+								</text>
+							</text>
 						</view>
+						<text class="pr-date">{{record.date}}</text>
 					</view>
+				</view>
+				<view class="empty-records" v-else>
+					<text class="empty-text">暂无个人记录</text>
+					<text class="empty-desc">完成训练后会自动更新记录</text>
 				</view>
 			</view>
 			
@@ -132,13 +166,311 @@ export default {
 			weightInput: '',
 			maxWeightInput: '',
 			exerciseIndex: 0,
-			exercises: ['深蹲', '卧推', '硬拉', '肩推', '引体向上', '杠铃划船', '高位下拉', '腿举', '侧平举', '杠铃弯举', '三头肌下压', '哑铃飞鸟', '平板支撑'],
+			exercises: [], // 将从训练数据库动态加载
 			
-			workoutLogs: [],
+			// 训练数据库（与其他页面同步）
+			exerciseDatabase: [
+				// 胸部动作
+				{
+					id: 1,
+					name: '杠铃卧推',
+					description: '使用杠铃在平板上进行胸部训练的基础动作，是发展胸肌力量的黄金动作',
+					tags: ['胸部', '杠铃'],
+					category: 'chest'
+				},
+				{
+					id: 2,
+					name: '哑铃卧推',
+					description: '使用哑铃进行的卧推动作，能够更好地刺激胸肌稳定性',
+					tags: ['胸部', '哑铃'],
+					category: 'chest'
+				},
+				{
+					id: 3,
+					name: '上斜卧推',
+					description: '在上斜角度进行的卧推，主要锻炼胸肌上部',
+					tags: ['胸部', '杠铃'],
+					category: 'chest'
+				},
+				{
+					id: 4,
+					name: '下斜卧推',
+					description: '在下斜角度进行的卧推，主要锻炼胸肌下部',
+					tags: ['胸部', '杠铃'],
+					category: 'chest'
+				},
+				{
+					id: 5,
+					name: '哑铃飞鸟',
+					description: '使用哑铃进行的胸部分离动作，能够很好地拉伸胸肌',
+					tags: ['胸部', '哑铃'],
+					category: 'chest'
+				},
+				{
+					id: 6,
+					name: '俯卧撑',
+					description: '经典的自重胸部训练动作，随时随地可以进行',
+					tags: ['胸部', '自重'],
+					category: 'chest'
+				},
+				{
+					id: 7,
+					name: '双杠臂屈伸',
+					description: '在双杠上进行的复合动作，同时锻炼胸肌和三头肌',
+					tags: ['胸部', '自重'],
+					category: 'chest'
+				},
+				
+				// 背部动作
+				{
+					id: 8,
+					name: '引体向上',
+					description: '锻炼背部和手臂力量的经典自重训练，发展背部宽度',
+					tags: ['背部', '自重'],
+					category: 'back'
+				},
+				{
+					id: 9,
+					name: '杠铃划船',
+					description: '使用杠铃进行的背部厚度训练，发展背阔肌和菱形肌',
+					tags: ['背部', '杠铃'],
+					category: 'back'
+				},
+				{
+					id: 10,
+					name: '哑铃划船',
+					description: '使用哑铃进行的单侧背部训练，可以修正力量不平衡',
+					tags: ['背部', '哑铃'],
+					category: 'back'
+				},
+				{
+					id: 11,
+					name: '高位下拉',
+					description: '在拉力器上进行的背部宽度训练，适合初学者学习引体向上动作模式',
+					tags: ['背部', '器械'],
+					category: 'back'
+				},
+				{
+					id: 12,
+					name: '坐姿划船',
+					description: '在坐姿划船机上进行的背部训练，能够很好地锻炼中背部肌群',
+					tags: ['背部', '器械'],
+					category: 'back'
+				},
+				{
+					id: 13,
+					name: 'T杠划船',
+					description: '使用T杠进行的划船动作，能够很好地发展背部厚度',
+					tags: ['背部', '杠铃'],
+					category: 'back'
+				},
+				{
+					id: 14,
+					name: '面拉',
+					description: '使用绳索进行的后束三角肌和菱形肌训练动作',
+					tags: ['背部', '器械'],
+					category: 'back'
+				},
+				
+				// 腿部动作
+				{
+					id: 15,
+					name: '杠铃深蹲',
+					description: '锻炼下肢肌群的黄金动作，是所有腿部训练的基础',
+					tags: ['腿部', '杠铃'],
+					category: 'legs'
+				},
+				{
+					id: 16,
+					name: '前蹲',
+					description: '杠铃置于前侧的深蹲变式，更多地锻炼股四头肌',
+					tags: ['腿部', '杠铃'],
+					category: 'legs'
+				},
+				{
+					id: 17,
+					name: '哑铃深蹲',
+					description: '使用哑铃进行的深蹲，适合初学者或家庭训练',
+					tags: ['腿部', '哑铃'],
+					category: 'legs'
+				},
+				{
+					id: 18,
+					name: '腿举',
+					description: '在腿举机上进行的下肢训练，可以使用更大的重量',
+					tags: ['腿部', '器械'],
+					category: 'legs'
+				},
+				{
+					id: 19,
+					name: '保加利亚深蹲',
+					description: '单腿进行的深蹲变式，能够很好地锻炼单侧力量',
+					tags: ['腿部', '自重'],
+					category: 'legs'
+				},
+				{
+					id: 20,
+					name: '罗马尼亚硬拉',
+					description: '主要锻炼腘绳肌和臀部肌群的硬拉变式',
+					tags: ['腿部', '杠铃'],
+					category: 'legs'
+				},
+				{
+					id: 21,
+					name: '硬拉',
+					description: '锻炼后链肌群的复合动作，提升整体力量的经典动作',
+					tags: ['背部', '腿部', '杠铃'],
+					category: 'legs'
+				},
+				
+				// 肩部动作
+				{
+					id: 22,
+					name: '杠铃肩推',
+					description: '使用杠铃进行的肩部推举，发展肩部整体力量',
+					tags: ['肩部', '杠铃'],
+					category: 'shoulders'
+				},
+				{
+					id: 23,
+					name: '哑铃肩推',
+					description: '使用哑铃进行的肩部推举，发展肩部力量和围度的经典动作',
+					tags: ['肩部', '哑铃'],
+					category: 'shoulders'
+				},
+				{
+					id: 24,
+					name: '侧平举',
+					description: '锻炼三角肌中束的分离动作，塑造肩部宽度',
+					tags: ['肩部', '哑铃'],
+					category: 'shoulders'
+				},
+				{
+					id: 25,
+					name: '前平举',
+					description: '主要锻炼三角肌前束的分离动作',
+					tags: ['肩部', '哑铃'],
+					category: 'shoulders'
+				},
+				{
+					id: 26,
+					name: '阿诺德推举',
+					description: '结合推举和旋转的复合肩部动作，以阿诺德·施瓦辛格命名',
+					tags: ['肩部', '哑铃'],
+					category: 'shoulders'
+				},
+				{
+					id: 27,
+					name: '倒立撑',
+					description: '高难度的自重肩部训练动作，需要良好的平衡能力',
+					tags: ['肩部', '自重'],
+					category: 'shoulders'
+				},
+				
+				// 手臂动作
+				{
+					id: 28,
+					name: '杠铃弯举',
+					description: '锻炼二头肌的基础动作，使用杠铃进行',
+					tags: ['手臂', '杠铃'],
+					category: 'arms'
+				},
+				{
+					id: 29,
+					name: '哑铃弯举',
+					description: '使用哑铃进行的二头肌训练，可以单侧或双侧进行',
+					tags: ['手臂', '哑铃'],
+					category: 'arms'
+				},
+				{
+					id: 30,
+					name: '锤式弯举',
+					description: '中性握法的弯举动作，同时锻炼二头肌和肱桡肌',
+					tags: ['手臂', '哑铃'],
+					category: 'arms'
+				},
+				{
+					id: 31,
+					name: '窄距卧推',
+					description: '窄握距的卧推变式，主要锻炼三头肌',
+					tags: ['手臂', '杠铃'],
+					category: 'arms'
+				},
+				{
+					id: 32,
+					name: '三头肌下压',
+					description: '在拉力器上锻炼三头肌的经典动作',
+					tags: ['手臂', '器械'],
+					category: 'arms'
+				},
+				{
+					id: 33,
+					name: '臂屈伸',
+					description: '在双杠或椅子上进行的三头肌训练动作',
+					tags: ['手臂', '自重'],
+					category: 'arms'
+				},
+				
+				// 核心动作
+				{
+					id: 34,
+					name: '平板支撑',
+					description: '强化核心肌群的等长收缩训练，是核心训练的基础动作',
+					tags: ['核心', '自重'],
+					category: 'core'
+				},
+				{
+					id: 35,
+					name: '卷腹',
+					description: '锻炼腹直肌的经典动作，是腹肌训练的基础',
+					tags: ['核心', '自重'],
+					category: 'core'
+				},
+				{
+					id: 36,
+					name: '俄罗斯转体',
+					description: '锻炼腹斜肌和核心旋转力量的动作',
+					tags: ['核心', '自重'],
+					category: 'core'
+				},
+				{
+					id: 37,
+					name: '登山者',
+					description: '结合有氧和核心训练的动态动作',
+					tags: ['核心', '自重'],
+					category: 'core'
+				},
+				{
+					id: 38,
+					name: '死虫',
+					description: '锻炼核心稳定性的对侧肢体协调动作',
+					tags: ['核心', '自重'],
+					category: 'core'
+				},
+				{
+					id: 39,
+					name: '鸟狗式',
+					description: '提升核心稳定性和平衡能力的瑜伽动作',
+					tags: ['核心', '自重'],
+					category: 'core'
+				}
+			],
+			
 			personalRecords: [],
-			strengthProgress: [],			trainingStats: {
-				thisMonth: 0,
-				total: 0
+			strengthProgress: [],
+
+			
+			// 本周锻炼部位数据
+			weeklyBodyParts: [],
+			currentWeekRange: '',
+			totalWorkouts: 0,
+			trainedBodyParts: 0,
+			
+			// 体重变化信息
+			weightChangeInfo: {
+				current: null,
+				change: null,
+				date: null
 			},
 			
 			// 同步状态
@@ -150,68 +482,112 @@ export default {
 			
 			// 动作名称映射，用于统一不同写法的动作名
 			exerciseMapping: {
-				'杠铃卧推': '卧推',
-				'哑铃卧推': '卧推',
-				'上斜卧推': '卧推',
-				'下斜卧推': '卧推',
-				'平板卧推': '卧推',
-				'卧推': '卧推',
+				// 胸部动作映射
+				'杠铃卧推': '杠铃卧推',
+				'哑铃卧推': '哑铃卧推',
+				'上斜卧推': '上斜卧推',
+				'下斜卧推': '下斜卧推',
 				'哑铃飞鸟': '哑铃飞鸟',
 				'俯卧撑': '俯卧撑',
 				'双杠臂屈伸': '双杠臂屈伸',
+				
+				// 背部动作映射
 				'引体向上': '引体向上',
 				'杠铃划船': '杠铃划船',
-				'哑铃划船': '杠铃划船',
+				'哑铃划船': '哑铃划船',
 				'高位下拉': '高位下拉',
-				'坐姿划船': '杠铃划船',
-				'T杠划船': '杠铃划船',
+				'坐姿划船': '坐姿划船',
+				'T杠划船': 'T杠划船',
 				'面拉': '面拉',
-				'杠铃深蹲': '深蹲',
-				'前蹲': '深蹲',
-				'哑铃深蹲': '深蹲',
-				'保加利亚深蹲': '深蹲',
-				'深蹲': '深蹲',
+				
+				// 腿部动作映射
+				'杠铃深蹲': '杠铃深蹲',
+				'前蹲': '前蹲',
+				'哑铃深蹲': '哑铃深蹲',
 				'腿举': '腿举',
-				'罗马尼亚硬拉': '硬拉',
+				'保加利亚深蹲': '保加利亚深蹲',
+				'罗马尼亚硬拉': '罗马尼亚硬拉',
 				'硬拉': '硬拉',
-				'杠铃硬拉': '硬拉',
-				'杠铃肩推': '肩推',
-				'哑铃肩推': '肩推',
-				'肩推': '肩推',
+				
+				// 肩部动作映射
+				'杠铃肩推': '杠铃肩推',
+				'哑铃肩推': '哑铃肩推',
 				'侧平举': '侧平举',
 				'前平举': '前平举',
-				'阿诺德推举': '肩推',
+				'阿诺德推举': '阿诺德推举',
 				'倒立撑': '倒立撑',
+				
+				// 手臂动作映射
 				'杠铃弯举': '杠铃弯举',
-				'哑铃弯举': '杠铃弯举',
-				'锤式弯举': '杠铃弯举',
+				'哑铃弯举': '哑铃弯举',
+				'锤式弯举': '锤式弯举',
 				'窄距卧推': '窄距卧推',
 				'三头肌下压': '三头肌下压',
-				'臂屈伸': '三头肌下压',
+				'臂屈伸': '臂屈伸',
+				
+				// 核心动作映射
 				'平板支撑': '平板支撑',
 				'卷腹': '卷腹',
 				'俄罗斯转体': '俄罗斯转体',
 				'登山者': '登山者',
 				'死虫': '死虫',
 				'鸟狗式': '鸟狗式',
+				
+				// 兼容旧的映射关系
+				'平板卧推': '杠铃卧推',
+				'杠铃硬拉': '硬拉',
+				'肩推': '杠铃肩推',
+				'深蹲': '杠铃深蹲',
+				'卧推': '杠铃卧推',
 				'仰卧起坐': '卷腹'
 			}
 		}
-	},	onShow() {
-		// 页面显示时加载训练记录和更新统计数据
-		this.loadWorkoutHistory();
+	},
+	onShow() {
+		// 页面显示时更新统计数据
+		// 初始化动作列表（排除自重动作）
+		this.initializeExerciseList();
+		
+		// 清理旧的无效记录
+		this.cleanupOldRecords();
+		
 		this.updatePersonalRecordsWithManualData();
 		this.updateStrengthProgress();
-		this.updateTrainingStats();
+		
+		// 加载本周锻炼部位数据
+		this.loadWeeklyBodyParts();
+		
+		// 加载体重变化信息
+		this.loadWeightChangeInfo();
 		
 		// 更新同步状态
 		this.updateSyncStatus();
+		
+
 	},
 	methods: {
 		navigateTo(page) {
 			uni.reLaunch({
 				url: `/pages/${page}/${page}`
 			});
+		},
+		
+		// 初始化动作列表，排除自重动作
+		initializeExerciseList() {
+			// 过滤掉标签包含"自重"的动作
+			const weightExercises = this.exerciseDatabase.filter(exercise => {
+				return !exercise.tags.includes('自重');
+			});
+			
+			// 提取动作名称并按字母顺序排序
+			this.exercises = weightExercises
+				.map(exercise => exercise.name)
+				.sort((a, b) => a.localeCompare(b, 'zh-CN'));
+			
+			// 确保exerciseIndex在有效范围内
+			if (this.exerciseIndex >= this.exercises.length) {
+				this.exerciseIndex = 0;
+			}
 		},
 
 		// 获取用户特定的存储键
@@ -294,6 +670,11 @@ export default {
 				duration: 2000
 			});
 			
+			// 更新体重变化信息显示
+			this.loadWeightChangeInfo();
+			
+
+			
 			this.weightInput = '';
 		},
 		recordMaxWeight() {
@@ -318,7 +699,9 @@ export default {
 			const exerciseName = this.exercises[this.exerciseIndex];
 			const standardExerciseName = this.getStandardExerciseName(exerciseName) || exerciseName;
 			const personalRecordsKey = this.getUserStorageKey('personalRecords');
+			const strengthProgressKey = this.getUserStorageKey('strengthProgress');
 			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
+			const savedProgress = uni.getStorageSync(strengthProgressKey) || {};
 			const currentDate = new Date().toISOString().split('T')[0];
 			
 			// 检查是否是新记录
@@ -331,28 +714,33 @@ export default {
 				};
 				uni.setStorageSync(personalRecordsKey, savedRecords);
 				
-				// 如果是新记录，显示庆祝效果
-				if (isNewRecord) {
-					uni.showModal({
-						title: '🎉 恭喜！',
-						content: `您在 ${standardExerciseName} 上创造了新的个人记录：${weight}kg！`,
-						showCancel: false,
-						confirmText: '太棒了！',
-						confirmColor: '#3b82f6'
-					});
+				// 如果是新的个人记录，更新力量进步的基准点
+				if (savedProgress[standardExerciseName] === undefined) {
+					// 如果是第一次记录该动作，设置基准点为当前重量
+					savedProgress[standardExerciseName] = weight;
+				} else {
+					// 如果已有基准点，保持不变，这样可以显示总的进步
+					// 不更新基准点，让用户看到从最初记录以来的总进步
 				}
+				uni.setStorageSync(strengthProgressKey, savedProgress);
 			}
 			
-			// 重新计算并更新个人记录（合并训练记录和手动记录）
+			// 立即更新个人记录显示
 			this.updatePersonalRecordsWithManualData();
 			this.updateStrengthProgress();
 			
 			let message = `${standardExerciseName}记录成功`;
 			if (isNewRecord) {
 				message += ' - 新个人记录!';
-			}
-			
-			if (!isNewRecord) {
+				// 如果是新记录，显示庆祝效果
+				uni.showModal({
+					title: '🎉 恭喜！',
+					content: `您在 ${standardExerciseName} 上创造了新的个人记录：${weight}kg！`,
+					showCancel: false,
+					confirmText: '太棒了！',
+					confirmColor: '#3b82f6'
+				});
+			} else {
 				uni.showToast({
 					title: message,
 					icon: 'success',
@@ -362,17 +750,7 @@ export default {
 			
 			this.maxWeightInput = '';
 		},
-		loadWorkoutHistory() {
-			// 从本地存储加载训练记录
-			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
-			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
-			this.workoutLogs = workoutHistory.map(workout => ({
-				id: workout.id,
-				date: workout.date,
-				type: workout.name,
-				status: workout.status
-			}));
-		},
+
 		
 		// 更新个人记录（合并训练记录和手动记录）
 		updatePersonalRecordsWithManualData() {
@@ -383,13 +761,21 @@ export default {
 			let records = {};
 			let hasNewRecord = false;
 			
-			// 首先加载已保存的手动记录
+			// 获取当前可用的动作列表（用于过滤旧记录）
+			const validExercises = this.exerciseDatabase
+				.filter(exercise => !exercise.tags.includes('自重'))
+				.map(exercise => exercise.name);
+			
+			// 首先加载已保存的手动记录，但只保留当前动作库中存在的动作
 			Object.keys(savedRecords).forEach(exerciseName => {
-				records[exerciseName] = {
-					weight: savedRecords[exerciseName].weight,
-					date: savedRecords[exerciseName].date,
-					isNew: this.isRecentDate(savedRecords[exerciseName].date)
-				};
+				// 只保留当前动作库中存在的动作
+				if (validExercises.includes(exerciseName)) {
+					records[exerciseName] = {
+						weight: savedRecords[exerciseName].weight,
+						date: savedRecords[exerciseName].date,
+						isNew: this.isRecentDate(savedRecords[exerciseName].date)
+					};
+				}
 			});
 			
 			// 然后从训练记录中提取每个动作的最大重量
@@ -397,7 +783,8 @@ export default {
 				if (workout.exercises && workout.exercises.length > 0) {
 					workout.exercises.forEach(exercise => {
 						const exerciseName = this.getStandardExerciseName(exercise.name);
-						if (exerciseName && exercise.sets && exercise.sets.length > 0) {
+						// 只处理当前动作库中存在的动作
+						if (exerciseName && validExercises.includes(exerciseName) && exercise.sets && exercise.sets.length > 0) {
 							exercise.sets.forEach(set => {
 								const weight = parseFloat(set.weight);
 								if (!isNaN(weight) && weight > 0) {
@@ -420,91 +807,50 @@ export default {
 				}
 			});
 			
-			// 转换为数组格式并排序
+			// 获取力量进步数据
+			const strengthProgressKey = this.getUserStorageKey('strengthProgress');
+			const savedProgress = uni.getStorageSync(strengthProgressKey) || {};
+			
+			// 转换为数组格式并排序，同时添加力量进步信息
 			this.personalRecords = Object.keys(records)
-				.map(exerciseName => ({
-					exercise: exerciseName,
-					weight: records[exerciseName].weight + ' kg',
-					date: records[exerciseName].date,
-					isNew: records[exerciseName].isNew
-				}))
+				.map(exerciseName => {
+					const currentWeight = records[exerciseName].weight;
+					let change = 0;
+					
+					// 如果savedProgress中有该动作的记录，计算变化
+					if (savedProgress[exerciseName] !== undefined) {
+						const previousWeight = savedProgress[exerciseName];
+						change = Math.round((currentWeight - previousWeight) * 10) / 10;
+					}
+					
+					return {
+						exercise: exerciseName,
+						weight: currentWeight + ' kg',
+						date: records[exerciseName].date,
+						isNew: records[exerciseName].isNew,
+						change: change
+					};
+				})
 				.sort((a, b) => parseFloat(b.weight) - parseFloat(a.weight));
 			
-			// 更新保存的记录（保持手动记录和训练记录的最高值）
+			// 更新保存的记录（只保存有效的动作记录）
 			const recordsToSave = {};
+			const progressToSave = {};
 			Object.keys(records).forEach(key => {
 				recordsToSave[key] = {
 					weight: records[key].weight,
 					date: records[key].date
 				};
-			});
-			uni.setStorageSync(personalRecordsKey, recordsToSave);
-			
-			// 如果有新记录，3秒后清除新记录标识
-			if (hasNewRecord) {
-				setTimeout(() => {
-					this.personalRecords.forEach(record => {
-						record.isNew = false;
-					});
-				}, 3000);
-			}
-		},
-		
-		// 更新个人记录（仅基于训练记录）
-		updatePersonalRecords() {
-			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
-			const personalRecordsKey = this.getUserStorageKey('personalRecords');
-			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
-			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
-			let records = {};
-			let hasNewRecord = false;
-			
-			// 从训练记录中提取每个动作的最大重量
-			workoutHistory.forEach(workout => {
-				if (workout.exercises && workout.exercises.length > 0) {
-					workout.exercises.forEach(exercise => {
-						const exerciseName = this.getStandardExerciseName(exercise.name);
-						if (exerciseName && exercise.sets && exercise.sets.length > 0) {
-							exercise.sets.forEach(set => {
-								const weight = parseFloat(set.weight);
-								if (!isNaN(weight) && weight > 0) {
-									if (!records[exerciseName] || weight > records[exerciseName].weight) {
-										// 检查是否是新记录
-										const isNewRecord = !savedRecords[exerciseName] || weight > savedRecords[exerciseName].weight;
-										if (isNewRecord) hasNewRecord = true;
-										
-										records[exerciseName] = {
-											weight: weight,
-											date: workout.date,
-											isNew: isNewRecord && this.isRecentDate(workout.date)
-										};
-									}
-								}
-							});
-						}
-					});
+				// 如果savedProgress中没有该动作记录，设置基准点为当前重量
+				// 如果已有基准点，保持不变，这样可以显示从基准点以来的进步
+				if (savedProgress[key] === undefined) {
+					progressToSave[key] = records[key].weight;
+				} else {
+					progressToSave[key] = savedProgress[key];
 				}
 			});
-			
-			// 转换为数组格式并排序
-			this.personalRecords = Object.keys(records)
-				.map(exerciseName => ({
-					exercise: exerciseName,
-					weight: records[exerciseName].weight + ' kg',
-					date: records[exerciseName].date,
-					isNew: records[exerciseName].isNew
-				}))
-				.sort((a, b) => parseFloat(b.weight) - parseFloat(a.weight));
-			
-			// 保存到本地存储
-			const recordsToSave = {};
-			Object.keys(records).forEach(key => {
-				recordsToSave[key] = {
-					weight: records[key].weight,
-					date: records[key].date
-				};
-			});
 			uni.setStorageSync(personalRecordsKey, recordsToSave);
+			uni.setStorageSync(strengthProgressKey, progressToSave);
 			
 			// 如果有新记录，3秒后清除新记录标识
 			if (hasNewRecord) {
@@ -523,10 +869,18 @@ export default {
 			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			const savedProgress = uni.getStorageSync(strengthProgressKey) || {};
 			
+			// 获取当前可用的动作列表（用于过滤旧记录）
+			const validExercises = this.exerciseDatabase
+				.filter(exercise => !exercise.tags.includes('自重'))
+				.map(exercise => exercise.name);
+			
 			// 获取当前个人记录
 			const currentRecords = {};
 			this.personalRecords.forEach(record => {
-				currentRecords[record.exercise] = parseFloat(record.weight);
+				// 只处理当前动作库中存在的动作
+				if (validExercises.includes(record.exercise)) {
+					currentRecords[record.exercise] = parseFloat(record.weight);
+				}
 			});
 			
 			// 计算进步情况
@@ -543,7 +897,7 @@ export default {
 				};
 			});
 			
-			// 更新保存的进度数据
+			// 更新保存的进度数据（只保存有效的动作）
 			const progressToSave = {};
 			Object.keys(currentRecords).forEach(key => {
 				progressToSave[key] = currentRecords[key];
@@ -551,33 +905,11 @@ export default {
 			uni.setStorageSync(strengthProgressKey, progressToSave);
 		},
 		
-		// 更新训练统计数据
-		updateTrainingStats() {
-			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
-			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
-			const now = new Date();
-			const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-			
-			let thisMonthCount = 0;
-			
-			workoutHistory.forEach(workout => {
-				const workoutDate = new Date(workout.date);
-				
-				// 统计本月训练
-				if (workoutDate >= thisMonthStart) {
-					thisMonthCount++;
-				}
-			});
-			
-			this.trainingStats = {
-				thisMonth: thisMonthCount,
-				total: workoutHistory.length
-			};
-		},
+
 		
 		// 获取标准化的动作名称
 		getStandardExerciseName(name) {
-			return this.exerciseMapping[name] || null;
+			return this.exerciseMapping[name] || name;
 		},
 		
 		// 检查日期是否为最近（用于显示新记录标识）
@@ -588,45 +920,49 @@ export default {
 			const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 			return diffDays <= 7; // 一周内的记录显示为新记录
 		},
-		addWorkoutLog() {
-			uni.navigateTo({
-				url: '/pages/record/record'
-			});
-		},
-		viewLogDetails(log) {
-			// 查找完整的训练记录
-			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
-			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
-			const fullWorkout = workoutHistory.find(workout => workout.id === log.id);
+
+		
+		// 清理旧的无效记录
+		cleanupOldRecords() {
+			// 获取当前可用的动作列表
+			const validExercises = this.exerciseDatabase
+				.filter(exercise => !exercise.tags.includes('自重'))
+				.map(exercise => exercise.name);
 			
-			if (fullWorkout) {
-				let detailText = `训练名称：${fullWorkout.name}\n`;
-				detailText += `训练类型：${fullWorkout.type}\n`;
-				detailText += `开始时间：${fullWorkout.startTime}\n\n`;
-				detailText += `训练动作：\n`;
-				
-				fullWorkout.exercises.forEach((exercise, index) => {
-					detailText += `${index + 1}. ${exercise.name}\n`;
-					exercise.sets.forEach((set, setIndex) => {
-						detailText += `   第${setIndex + 1}组: ${set.weight}kg × ${set.reps}次\n`;
-					});
-				});
-				
-				uni.showModal({
-					title: '训练详情',
-					content: detailText,
-					showCancel: false,
-					confirmText: '知道了'
-				});
-			} else {
-				uni.showToast({
-					title: '记录详情不存在',
-					icon: 'none'
-				});
+			// 清理个人记录存储
+			const personalRecordsKey = this.getUserStorageKey('personalRecords');
+			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
+			const cleanedRecords = {};
+			
+			Object.keys(savedRecords).forEach(exerciseName => {
+				if (validExercises.includes(exerciseName)) {
+					cleanedRecords[exerciseName] = savedRecords[exerciseName];
+				}
+			});
+			
+			// 如果有变化，更新存储
+			if (Object.keys(cleanedRecords).length !== Object.keys(savedRecords).length) {
+				uni.setStorageSync(personalRecordsKey, cleanedRecords);
+				console.log('已清理个人记录中的无效动作');
+			}
+			
+			// 清理力量进步存储
+			const strengthProgressKey = this.getUserStorageKey('strengthProgress');
+			const savedProgress = uni.getStorageSync(strengthProgressKey) || {};
+			const cleanedProgress = {};
+			
+			Object.keys(savedProgress).forEach(exerciseName => {
+				if (validExercises.includes(exerciseName)) {
+					cleanedProgress[exerciseName] = savedProgress[exerciseName];
+				}
+			});
+			
+			// 如果有变化，更新存储
+			if (Object.keys(cleanedProgress).length !== Object.keys(savedProgress).length) {
+				uni.setStorageSync(strengthProgressKey, cleanedProgress);
+				console.log('已清理力量进步中的无效动作');
 			}
 		},
-		
-
 		
 		// 数据同步方法
 		async syncData() {
@@ -659,10 +995,8 @@ export default {
 					this.syncStatus.text = '同步成功';
 					
 					// 重新加载数据
-					this.loadWorkoutHistory();
 					this.updatePersonalRecordsWithManualData();
 					this.updateStrengthProgress();
-					this.updateTrainingStats();
 					
 					uni.showToast({
 						title: '数据同步成功',
@@ -710,6 +1044,234 @@ export default {
 					syncing: false
 				};
 			}
+		},
+		
+		// 加载本周锻炼部位数据
+		loadWeeklyBodyParts() {
+			// 获取本周的开始和结束日期
+			const now = new Date();
+			const startOfWeek = new Date(now);
+			const day = now.getDay();
+			const diff = now.getDate() - day + (day === 0 ? -6 : 1); // 调整为周一开始
+			startOfWeek.setDate(diff);
+			startOfWeek.setHours(0, 0, 0, 0);
+			
+			const endOfWeek = new Date(startOfWeek);
+			endOfWeek.setDate(startOfWeek.getDate() + 6);
+			endOfWeek.setHours(23, 59, 59, 999);
+			
+			// 设置当前周范围显示
+			const formatDate = (date) => {
+				return `${date.getMonth() + 1}/${date.getDate()}`;
+			};
+			this.currentWeekRange = `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+			
+			// 从训练记录中统计本周各部位训练次数
+			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
+			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			
+			// 定义部位映射和图标
+			const bodyPartMapping = {
+				'chest': { name: '胸部', icon: '💪' },
+				'back': { name: '背部', icon: '🏋️' },
+				'legs': { name: '腿部', icon: '🦵' },
+				'shoulders': { name: '肩部', icon: '🤲' },
+				'arms': { name: '手臂', icon: '💪' },
+				'core': { name: '核心', icon: '🔥' }
+			};
+			
+			// 统计本周各部位训练次数
+			const weeklyStats = {};
+			let totalWorkouts = 0;
+			
+			workoutHistory.forEach(workout => {
+				const workoutDate = new Date(workout.date);
+				if (workoutDate >= startOfWeek && workoutDate <= endOfWeek) {
+					totalWorkouts++;
+					
+					// 统计每个动作对应的部位
+					workout.exercises.forEach(exercise => {
+						// 根据动作名称找到对应的部位
+						const exerciseInfo = this.exerciseDatabase.find(ex => ex.name === exercise.name);
+						if (exerciseInfo) {
+							const category = exerciseInfo.category;
+							if (!weeklyStats[category]) {
+								weeklyStats[category] = 0;
+							}
+							weeklyStats[category]++;
+						}
+					});
+				}
+			});
+			
+			// 转换为显示格式，显示所有部位（包括0次的）
+			this.weeklyBodyParts = Object.keys(bodyPartMapping).map(category => {
+				const count = weeklyStats[category] || 0;
+				
+				return {
+					name: bodyPartMapping[category].name,
+					icon: bodyPartMapping[category].icon,
+					count: count
+				};
+			}).sort((a, b) => b.count - a.count); // 按训练次数降序排列
+			
+			this.totalWorkouts = totalWorkouts;
+			this.trainedBodyParts = this.weeklyBodyParts.filter(part => part.count > 0).length;
+		},
+		
+		// 加载体重变化信息
+		loadWeightChangeInfo() {
+			const weightHistoryKey = this.getUserStorageKey('weightHistory');
+			const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
+			
+			if (weightHistory.length === 0) {
+				this.weightChangeInfo = {
+					current: null,
+					change: null,
+					date: null,
+					chartData: []
+				};
+				return;
+			}
+			
+			// 按日期排序（最新的在前面）
+			weightHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+			
+			const currentRecord = weightHistory[0];
+			let change = null;
+			
+			// 如果有至少两条记录，计算变化
+			if (weightHistory.length >= 2) {
+				const previousRecord = weightHistory[1];
+				change = Math.round((currentRecord.weight - previousRecord.weight) * 10) / 10;
+			}
+			
+			// 获取近7天的数据用于图表
+			const chartData = this.getLast7DaysWeightData(weightHistory);
+			
+			this.weightChangeInfo = {
+				current: currentRecord.weight,
+				change: change,
+				date: currentRecord.date,
+				chartData: chartData
+			};
+		},
+		
+		// 获取近7天的体重数据
+		getLast7DaysWeightData(weightHistory) {
+			const today = new Date();
+			const chartData = [];
+			
+			// 生成近7天的日期
+			for (let i = 6; i >= 0; i--) {
+				const date = new Date(today);
+				date.setDate(today.getDate() - i);
+				const dateString = date.toISOString().split('T')[0];
+				
+				// 查找该日期的体重记录
+				const record = weightHistory.find(r => r.date === dateString);
+				
+				chartData.push({
+					date: dateString,
+					dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+					weight: record ? record.weight : null
+				});
+			}
+			
+			return chartData;
+		},
+		
+
+		
+		// 获取有效数据点
+		getValidDataPoints() {
+			if (!this.weightChangeInfo.chartData) return [];
+			
+			return this.weightChangeInfo.chartData
+				.map((item, index) => ({ item, originalIndex: index }))
+				.filter(data => data.item.weight !== null);
+		},
+		
+		// 计算数据点位置样式
+		getPointStyle(item, index) {
+			if (!item.weight || !this.weightChangeInfo.chartData) {
+				return { display: 'none' };
+			}
+			
+			// 获取所有有效体重数据
+			const validWeights = this.weightChangeInfo.chartData
+				.filter(item => item.weight !== null)
+				.map(item => item.weight);
+			
+			if (validWeights.length === 0) {
+				return { display: 'none' };
+			}
+			
+			const minWeight = Math.min(...validWeights);
+			const maxWeight = Math.max(...validWeights);
+			const range = maxWeight - minWeight || 0.1; // 避免除零，最小范围0.1
+			
+			// 计算水平位置（基于原始索引）
+			const leftPercent = (index / Math.max(this.weightChangeInfo.chartData.length - 1, 1)) * 100;
+			
+			// 计算垂直位置（基于体重值，从上往下，留出边距）
+			const normalizedValue = (item.weight - minWeight) / range;
+			const topPercent = 10 + (1 - normalizedValue) * 70; // 10%到80%的范围
+			
+			return {
+				left: `${leftPercent}%`,
+				top: `${topPercent}%`,
+				position: 'absolute'
+			};
+		},
+		
+		// 计算连接线段
+		getLineSegments() {
+			const validPoints = this.getValidDataPoints();
+			if (validPoints.length < 2) return [];
+			
+			const segments = [];
+			const validWeights = validPoints.map(p => p.item.weight);
+			const minWeight = Math.min(...validWeights);
+			const maxWeight = Math.max(...validWeights);
+			const range = maxWeight - minWeight || 0.1; // 避免除零
+			
+			for (let i = 0; i < validPoints.length - 1; i++) {
+				const point1 = validPoints[i];
+				const point2 = validPoints[i + 1];
+				
+				// 计算两点位置（与getPointStyle保持一致）
+				const x1 = (point1.originalIndex / Math.max(this.weightChangeInfo.chartData.length - 1, 1)) * 100;
+				const normalizedValue1 = (point1.item.weight - minWeight) / range;
+				const y1 = 10 + (1 - normalizedValue1) * 70;
+				
+				const x2 = (point2.originalIndex / Math.max(this.weightChangeInfo.chartData.length - 1, 1)) * 100;
+				const normalizedValue2 = (point2.item.weight - minWeight) / range;
+				const y2 = 10 + (1 - normalizedValue2) * 70;
+				
+				// 计算线段长度和角度
+				const deltaX = x2 - x1;
+				const deltaY = y2 - y1;
+				const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+				const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+				
+				segments.push({
+					style: {
+						position: 'absolute',
+						left: `${x1}%`,
+						top: `${y1}%`,
+						width: `${length}%`,
+						height: '3px',
+						backgroundColor: '#3b82f6',
+						transformOrigin: '0 50%',
+						transform: `rotate(${angle}deg)`,
+						zIndex: 1,
+						borderRadius: '2px'
+					}
+				});
+			}
+			
+			return segments;
 		}
 	}
 }
@@ -804,21 +1366,28 @@ export default {
 	padding: 30rpx;
 }
 
-.stats-grid {
-	display: grid;
-	grid-template-columns: 1fr;
+.top-row {
+	display: flex;
 	gap: 30rpx;
 	margin-bottom: 40rpx;
 	
-	@media screen and (min-width: 768px) {
-		grid-template-columns: repeat(3, 1fr);
+	.card {
+		flex: 1;
 	}
+	
+	@media screen and (max-width: 768px) {
+		flex-direction: column;
+	}
+}
+
+.card {
+	padding: 30rpx;
+	margin-bottom: 40rpx;
 }
 
 .stat-card {
 	display: flex;
 	flex-direction: column;
-	padding: 30rpx;
 }
 
 .stat-card-title {
@@ -961,8 +1530,6 @@ export default {
 	flex: 3;
 }
 
-
-
 .th-status, .td-status {
 	flex: 2;
 	display: flex;
@@ -1006,13 +1573,209 @@ export default {
 	flex: 2;
 }
 
+// 本周锻炼部位样式
+.weekly-body-parts {
+	.week-range {
+		font-size: 24rpx;
+		color: var(--text-color-light);
+	}
+}
 
+.body-parts-list {
+	margin: 20rpx 0;
+}
+
+.body-part-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 2rpx solid #f1f5f9;
+}
+
+.body-part-item:last-child {
+	border-bottom: none;
+}
+
+.body-part-info {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+	flex: 1;
+}
+
+.body-part-name {
+	font-size: 28rpx;
+	font-weight: 500;
+	color: var(--text-color);
+	min-width: 80rpx;
+}
+
+.body-part-count {
+	font-size: 26rpx;
+	color: var(--primary-color);
+	font-weight: bold;
+}
+
+.weekly-summary {
+	text-align: center;
+	padding: 20rpx;
+	background-color: rgba(59, 130, 246, 0.1);
+	border-radius: 8rpx;
+	margin-top: 20rpx;
+}
+
+.summary-text {
+	font-size: 26rpx;
+	color: var(--text-color);
+}
+
+.empty-state {
+	text-align: center;
+	padding: 60rpx 20rpx;
+	color: var(--text-color-light);
+}
 
 // 空状态样式
 .empty-records {
 	text-align: center;
 	padding: 60rpx 20rpx;
 	color: var(--text-color-light);
+}
+
+// 体重变化卡片样式
+.weight-content {
+	display: flex;
+	flex-direction: column;
+	gap: 20rpx;
+}
+
+.weight-chart {
+	margin-top: 20rpx;
+}
+
+.chart-title {
+	font-size: 24rpx;
+	color: var(--text-color-light);
+	margin-bottom: 15rpx;
+	display: block;
+}
+
+.line-chart {
+	width: 100%;
+	background-color: #fafafa;
+	border-radius: 8rpx;
+	padding: 20rpx;
+	box-sizing: border-box;
+}
+
+.chart-container {
+	position: relative;
+	height: 200rpx;
+	width: 100%;
+	margin-bottom: 20rpx;
+	overflow: hidden;
+}
+
+.chart-grid {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: 
+		linear-gradient(to bottom, 
+			transparent 0%, transparent 19%, 
+			#e5e7eb 19%, #e5e7eb 21%, 
+			transparent 21%, transparent 39%, 
+			#e5e7eb 39%, #e5e7eb 41%, 
+			transparent 41%, transparent 59%, 
+			#e5e7eb 59%, #e5e7eb 61%, 
+			transparent 61%, transparent 79%, 
+			#e5e7eb 79%, #e5e7eb 81%, 
+			transparent 81%),
+		linear-gradient(to right,
+			transparent 0%, transparent 15.5%,
+			#e5e7eb 15.5%, #e5e7eb 17.5%,
+			transparent 17.5%, transparent 31.5%,
+			#e5e7eb 31.5%, #e5e7eb 33.5%,
+			transparent 33.5%, transparent 47.5%,
+			#e5e7eb 47.5%, #e5e7eb 49.5%,
+			transparent 49.5%, transparent 63.5%,
+			#e5e7eb 63.5%, #e5e7eb 65.5%,
+			transparent 65.5%, transparent 79.5%,
+			#e5e7eb 79.5%, #e5e7eb 81.5%,
+			transparent 81.5%);
+	pointer-events: none;
+}
+
+.chart-line-segment {
+	background-color: var(--primary-color);
+	border-radius: 1rpx;
+}
+
+.chart-point {
+	width: 16rpx;
+	height: 16rpx;
+	background-color: var(--primary-color);
+	border: 4rpx solid #fff;
+	border-radius: 50%;
+	transform: translate(-50%, -50%);
+	cursor: pointer;
+	transition: all 0.3s ease;
+	z-index: 2;
+	box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.4);
+}
+
+.chart-point:hover {
+	width: 20rpx;
+	height: 20rpx;
+	box-shadow: 0 6rpx 16rpx rgba(59, 130, 246, 0.6);
+}
+
+.chart-point:hover .point-tooltip {
+	opacity: 1;
+	transform: translateX(-50%) translateY(-100%) scale(1);
+}
+
+.point-tooltip {
+	position: absolute;
+	bottom: 25rpx;
+	left: 50%;
+	transform: translateX(-50%) translateY(-100%) scale(0.8);
+	background-color: rgba(0, 0, 0, 0.8);
+	color: white;
+	padding: 8rpx 12rpx;
+	border-radius: 6rpx;
+	font-size: 20rpx;
+	white-space: nowrap;
+	opacity: 0;
+	transition: all 0.3s ease;
+	pointer-events: none;
+	z-index: 3;
+}
+
+.point-tooltip::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	border: 6rpx solid transparent;
+	border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+.chart-labels {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.chart-label {
+	font-size: 20rpx;
+	color: var(--text-color-light);
+	text-align: center;
+	flex: 1;
 }
 
 .empty-text {
@@ -1092,12 +1855,25 @@ export default {
 	flex: 2;
 }
 
+.pr-weight-info {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+}
+
 .pr-weight {
 	font-size: 30rpx;
 	font-weight: bold;
 	color: var(--primary-color);
-	flex: 1;
-	text-align: center;
+	display: flex;
+	align-items: baseline;
+}
+
+.pr-change {
+	font-size: 22rpx;
+	font-weight: normal;
+	margin-left: 8rpx;
 }
 
 .pr-date {
