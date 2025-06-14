@@ -148,15 +148,25 @@
 						<view class="exercise-detail-item" v-for="(exercise, index) in selectedWorkout.exercises" :key="index">
 							<text class="exercise-detail-name">{{index + 1}}. {{exercise.name}}</text>
 							
-							<view class="sets-detail" v-if="exercise.sets && exercise.sets.length > 0">
-								<view class="set-detail" v-for="(set, setIndex) in exercise.sets" :key="setIndex">
-									<text class="set-detail-text">
-										第{{setIndex + 1}}组: 
-										<span v-if="set.weight && set.weight !== '' && set.weight !== '0' && parseFloat(set.weight) > 0">{{set.weight}}kg × </span>
-										{{set.reps}}次
-									</text>
-									<text class="set-rest" v-if="set.rest">休息{{set.rest}}秒</text>
-								</view>
+							<!-- 统一显示总体信息，不再区分来源 -->
+							<view class="exercise-summary">
+								<text class="summary-text">
+									<!-- 来自日计划的训练 -->
+									<span v-if="exercise.source === 'dailyPlan' || selectedWorkout.source === 'dailyPlan'">
+										{{exercise.totalSets || 1}}组 × {{exercise.reps || 1}}次
+										<span v-if="exercise.weight && exercise.weight !== '' && exercise.weight !== '0' && parseFloat(exercise.weight) > 0"> ({{exercise.weight}}kg)</span>
+									</span>
+									<!-- 来自记录页面的训练，计算总体信息 -->
+									<span v-else-if="exercise.sets && exercise.sets.length > 0">
+										{{exercise.sets.length}}组 × {{getAverageReps(exercise.sets)}}次
+										<span v-if="getAverageWeight(exercise.sets) > 0"> ({{getAverageWeight(exercise.sets)}}kg)</span>
+									</span>
+									<!-- 其他情况的默认显示 -->
+									<span v-else>
+										1组 × 1次
+									</span>
+								</text>
+								<text class="rest-text" v-if="getRestTime(exercise)">组间休息: {{getRestTime(exercise)}}秒</text>
 							</view>
 							
 							<view class="exercise-notes" v-if="exercise.notes">
@@ -798,6 +808,52 @@ export default {
 			});
 			
 			return monthsWithData[0] || this.selectedMonth;
+		},
+		
+		// 计算平均次数
+		getAverageReps(sets) {
+			if (!sets || sets.length === 0) return 1;
+			
+			const totalReps = sets.reduce((sum, set) => {
+				const reps = parseInt(set.reps) || 0;
+				return sum + reps;
+			}, 0);
+			
+			return Math.round(totalReps / sets.length);
+		},
+		
+		// 计算平均重量
+		getAverageWeight(sets) {
+			if (!sets || sets.length === 0) return 0;
+			
+			const validWeights = sets.filter(set => {
+				const weight = parseFloat(set.weight);
+				return !isNaN(weight) && weight > 0;
+			});
+			
+			if (validWeights.length === 0) return 0;
+			
+			const totalWeight = validWeights.reduce((sum, set) => {
+				return sum + parseFloat(set.weight);
+			}, 0);
+			
+			return Math.round(totalWeight / validWeights.length * 10) / 10; // 保留一位小数
+		},
+		
+		// 获取休息时间
+		getRestTime(exercise) {
+			// 来自日计划的训练
+			if (exercise.source === 'dailyPlan' || exercise.rest) {
+				return exercise.rest;
+			}
+			
+			// 来自记录页面的训练，取第一组的休息时间
+			if (exercise.sets && exercise.sets.length > 0) {
+				const firstSet = exercise.sets[0];
+				return firstSet.rest || '';
+			}
+			
+			return '';
 		}
 	}
 }
@@ -1247,6 +1303,29 @@ export default {
 }
 
 .set-rest {
+	font-size: 24rpx;
+	color: var(--text-color-light);
+}
+
+.exercise-summary {
+	padding: 15rpx 0;
+	border-left: 4rpx solid var(--primary-color);
+	padding-left: 15rpx;
+	margin: 10rpx 0;
+	background-color: #f8fafc;
+	border-radius: 8rpx;
+	padding: 15rpx;
+}
+
+.summary-text {
+	font-size: 28rpx;
+	color: var(--text-color);
+	font-weight: 500;
+	display: block;
+	margin-bottom: 8rpx;
+}
+
+.rest-text {
 	font-size: 24rpx;
 	color: var(--text-color-light);
 }
