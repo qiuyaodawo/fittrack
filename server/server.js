@@ -394,12 +394,12 @@ app.get('/api/health', (req, res) => {
 
 // 启动服务器
 app.listen(PORT, () => {
-    console.log(`🚀 FitTrack服务器已启动！`);
-    console.log(`📡 服务器地址: http://localhost:${PORT}`);
-    console.log(`🔍 健康检查: http://localhost:${PORT}/api/health`);
-    console.log(`📊 数据库路径: ${dbPath}`);
+    console.log(`FitTrack服务器已启动！`);
+    console.log(`服务器地址: http://localhost:${PORT}`);
+    console.log(`健康检查: http://localhost:${PORT}/api/health`);
+    console.log(`数据库路径: ${dbPath}`);
     console.log('');
-    console.log('✨ 服务器功能：');
+    console.log('服务器功能：');
     console.log('   - 用户注册和登录');
     console.log('   - 训练记录同步');
     console.log('   - 个人记录管理');
@@ -409,12 +409,12 @@ app.listen(PORT, () => {
 
 // 优雅关闭
 process.on('SIGINT', () => {
-    console.log('\n👋 正在关闭服务器...');
+    console.log('\n正在关闭服务器...');
     db.close((err) => {
         if (err) {
             console.error('关闭数据库时出错:', err.message);
         } else {
-            console.log('✅ 数据库连接已关闭');
+            console.log('数据库连接已关闭');
         }
         process.exit(0);
     });
