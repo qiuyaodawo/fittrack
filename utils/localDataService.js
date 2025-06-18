@@ -4,11 +4,32 @@
  */
 class LocalDataService {
 	constructor() {
-		this.baseURL = 'http://localhost:3000/api';
+		// 自动检测服务器地址
+		this.baseURL = this.getServerURL();
 		this.isLoggedIn = false;
 		this.userId = null;
 		this.token = null;
 		this.init();
+	}
+	
+	// 自动获取服务器URL
+	getServerURL() {
+		// 如果是在浏览器环境中
+		if (typeof window !== 'undefined') {
+			const hostname = window.location.hostname;
+			const port = window.location.port;
+			
+			// 如果访问的是localhost或127.0.0.1，使用本地服务器
+			if (hostname === 'localhost' || hostname === '127.0.0.1') {
+				return 'http://localhost:3000/api';
+			} else {
+				// 如果是其他IP地址，使用相同IP的3000端口
+				return `http://${hostname}:3000/api`;
+			}
+		}
+		
+		// 默认返回localhost（兼容非浏览器环境）
+		return 'http://localhost:3000/api';
 	}
 	
 	// 初始化服务

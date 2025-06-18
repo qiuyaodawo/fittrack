@@ -8,13 +8,33 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = 3000; // 改回3000端口
 const JWT_SECRET = 'fittrack_secret_key_2024';
 
 // 中间件配置
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// 提供静态文件服务（只提供特定文件夹）
+app.use('/static', express.static(path.join(__dirname, '..', 'static')));
+app.use('/pages', express.static(path.join(__dirname, '..', 'pages')));
+app.use('/utils', express.static(path.join(__dirname, '..', 'utils')));
+
+// 提供主页面
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'fit.html'));
+});
+
+// 提供登录页面路由
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'fit.html'));
+});
+
+// 提供index.html（如果有uni-app编译后的文件）
+app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
 
 // 数据库初始化
 const dbPath = path.join(__dirname, 'fittrack.db');
@@ -392,14 +412,15 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// 启动服务器
-app.listen(PORT, () => {
-    console.log(`FitTrack服务器已启动！`);
-    console.log(`服务器地址: http://localhost:${PORT}`);
-    console.log(`健康检查: http://localhost:${PORT}/api/health`);
-    console.log(`数据库路径: ${dbPath}`);
+// 启动服务器，监听所有IP地址
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 FitTrack服务器已启动！`);
+    console.log(`📡 本地地址: http://localhost:${PORT}`);
+    console.log(`🌐 局域网地址: http://172.18.148.13:${PORT}`);
+    console.log(`🔍 健康检查: http://172.18.148.13:${PORT}/api/health`);
+    console.log(`📊 数据库路径: ${dbPath}`);
     console.log('');
-    console.log('服务器功能：');
+    console.log('✨ 服务器功能：');
     console.log('   - 用户注册和登录');
     console.log('   - 训练记录同步');
     console.log('   - 个人记录管理');

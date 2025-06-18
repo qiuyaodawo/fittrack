@@ -4168,3 +4168,52 @@ page {
 	line-height: 1.5;
 }
 </style>
+	width: 100%;
+	min-height: 160rpx;
+	padding: 20rpx 24rpx;
+	font-size: 28rpx;
+	color: #333;
+	background-color: #fff;
+	border: 2rpx solid #e1e8ed;
+	border-radius: 12rpx;
+	box-sizing: border-box;
+	resize: vertical;
+	transition: all 0.3s ease;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+	line-height: 1.5;
+}
+
+.form-textarea:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 6rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+	background-color: #fcfcfd;
+}
+
+.form-textarea::placeholder {
+	color: #9ca3af;
+	font-size: 26rpx;
+}
+
+/* 动作选择/编辑弹窗 */
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10000;
+}
+
+.modal-content {
+	width: 90%;
+	max-width: 800rpx;
+	max-height: 90vh;
+	background-color: #fff;
+	border-radius: 12rpx;
+	overflow: hidden;
+	box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
