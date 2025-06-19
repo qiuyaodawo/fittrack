@@ -1,23 +1,7 @@
 <template>
 	<view class="page-container">
-		<!-- 顶部导航 -->
-		<view class="top-nav">
-			<view class="logo">FitTrack</view>
-			<view class="nav-links">
-				<view class="nav-item" @tap="handleNavigation('index')">首页</view>
-				<view class="nav-item" @tap="handleNavigation('history')">记录</view>
-				<view class="nav-item" @tap="handleNavigation('progress')">进度追踪</view>
-				<view class="nav-item active">健身计划</view>
-				<view class="nav-item" @tap="handleNavigation('workouts')">训练数据库</view>
-			</view>
-			<view class="nav-actions">
-				<!-- 同步状态指示器 -->
-				<view class="sync-status" @tap="handleSync" v-if="showSyncStatus">
-					<text class="sync-icon" :class="syncStatus.icon">●</text>
-					<text class="sync-text">{{ syncStatus.text }}</text>
-				</view>
-			</view>
-		</view>
+		<!-- 使用全局导航组件 -->
+		<global-nav current-page="plans"></global-nav>
 
 		<view class="content-container">
 			<view class="card plan-generator">
@@ -430,7 +414,7 @@
 													@tap="editExercise(index)">编辑</button>
 												<button class="action-btn delete-btn"
 													@tap="removeExercise(index)">删除</button>
-											</view>
+												</view>
 										</view>
 										<view class="exercise-info">
 											<text class="info-text">{{ exercise.sets }}组 × {{ exercise.reps }}次</text>
@@ -569,6 +553,10 @@ import {
 } from '@/utils/uiHelpers.js';
 
 export default {
+	// 注册全局导航组件
+	components: {
+		'global-nav': () => import('@/components/global-nav/global-nav.vue')
+	},
 	data() {
 		return {
 			// 基础配置
@@ -689,6 +677,8 @@ export default {
 		}
 	},
 	onShow() {
+		// 页面显示时加载用户信息
+		this.loadUserInfo();
 		// 页面显示时加载我的计划
 		this.loadMyPlans();
 		// 更新同步状态
@@ -1230,7 +1220,20 @@ export default {
 			this.exerciseDetails.rest = Math.max(30, value);
 		},
 
+		// 加载用户信息
+		loadUserInfo() {
+			const userInfo = uni.getStorageSync('userInfo');
+			this.userInfo = userInfo;
+			console.log('加载用户信息:', userInfo);
+			
+			// 确保同步状态与登录状态一致
+			this.updateSyncStatus();
+		},
 
+		// 处理同步按钮点击
+		handleSync() {
+			this.syncData();
+		},
 
 		// 获取某天的训练计划
 		getDayPlan(week, day) {
@@ -1759,202 +1762,6 @@ export default {
 			}));
 		},
 
-		// 获取详细的训练计划数据
-		getDetailedPlanData() {
-			return {
-				// 增肌一周计划
-				0: {
-					"初级": {
-						"3": [
-							{ day: '周一', focus: '全身基础', exercises: ['俯卧撑 3组 x 8-12次', '深蹲 3组 x 12-15次', '平板支撑 3组 x 30-45秒'] },
-							{ day: '周三', focus: '上肢训练', exercises: ['墙面俯卧撑 3组 x 10-15次', '哑铃弯举 3组 x 10-12次', '三头肌撑体 3组 x 8-10次'] },
-							{ day: '周五', focus: '下肢训练', exercises: ['徒手深蹲 3组 x 15-20次', '弓步蹲 3组 x 10-12次', '小腿提踵 3组 x 15-20次'] }
-						],
-						"4": [
-							{ day: '周一', focus: '胸肩', exercises: ['俯卧撑 3组 x 10次', '肩部绕环 3组 x 15次', '平板支撑 3组 x 30秒'] },
-							{ day: '周二', focus: '背部', exercises: ['反向飞鸟 3组 x 12次', '超人式 3组 x 10次', '猫式伸展 3组 x 15次'] },
-							{ day: '周四', focus: '腿部', exercises: ['深蹲 3组 x 15次', '弓步蹲 3组 x 10次', '单腿提踵 3组 x 12次'] },
-							{ day: '周六', focus: '核心', exercises: ['卷腹 3组 x 15次', '平板支撑 3组 x 30秒', '俄罗斯转体 3组 x 20次'] }
-						],
-						"5": [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
-							{ day: '周二', focus: '背部', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '坐姿划船 3组 x 10-12次', '高位下拉 3组 x 12次'] },
-							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '保加利亚深蹲 3组 x 12次'] },
-							{ day: '周五', focus: '肩部', exercises: ['哑铃肩推 4组 x 8-10次', '侧平举 4组 x 12-15次', '阿诺德推举 3组 x 15次', '前平举 3组 x 12次'] },
-							{ day: '周六', focus: '手臂', exercises: ['哑铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] }
-						],
-						"6": [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次', '双杠臂屈伸 3组 x 8-12次'] },
-							{ day: '周二', focus: '背部', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '坐姿划船 3组 x 10-12次', '高位下拉 3组 x 12次'] },
-							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '保加利亚深蹲 3组 x 10-12次', '前蹲 3组 x 12-15次'] },
-							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '侧平举 4组 x 12-15次', '阿诺德推举 3组 x 15次', '前平举 3组 x 12次'] },
-							{ day: '周五', focus: '手臂', exercises: ['哑铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] },
-							{ day: '周六', focus: '腿部 (后链)', exercises: ['罗马尼亚硬拉 4组 x 8-10次', '硬拉 4组 x 12-15次', '保加利亚深蹲 3组 x 15-20次', '哑铃深蹲 4组 x 15-20次'] }
-						]
-					},
-					"中级": {
-						"3": [
-							{ day: '周一', focus: '推力主导', exercises: ['杠铃卧推 5组 x 6-8次', '杠铃肩推 4组 x 8次', '上斜卧推 4组 x 8-10次', '三头肌下压 4组 x 10次'] },
-							{ day: '周三', focus: '拉力主导', exercises: ['硬拉 4组 x 6次', '引体向上 4组 x 8次', '杠铃划船 4组 x 8次', '杠铃弯举 4组 x 10次'] },
-							{ day: '周五', focus: '下肢主导', exercises: ['杠铃深蹲 5组 x 6-8次', '前蹲 3组 x 8次', '罗马尼亚硬拉 4组 x 8次', '腿举 3组 x 12次'] }
-						],
-						"4": [
-							{ day: '周一', focus: '胸肩三头', exercises: ['杠铃卧推 4组 x 8次', '上斜卧推 3组 x 10-12次', '杠铃肩推 4组 x 8-10次', '三头肌下压 3组 x 12-15次'] },
-							{ day: '周二', focus: '背二头', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '哑铃划船 3组 x 10-12次', '杠铃弯举 4组 x 10-12次'] },
-							{ day: '周四', focus: '腿部训练', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '哑铃深蹲 4组 x 15-20次'] },
-							{ day: '周六', focus: '手臂专项', exercises: ['窄距卧推 4组 x 8-10次', '哑铃弯举 4组 x 10-12次', '锤式弯举 3组 x 12次', '臂屈伸 3组 x 12次'] }
-						],
-						"5": [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次'] },
-							{ day: '周二', focus: '背部', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '坐姿划船 3组 x 10-12次', '高位下拉 3组 x 12次'] },
-							{ day: '周三', focus: '腿部', exercises: ['杠铃深蹲 4组 x 8-10次', '罗马尼亚硬拉 4组 x 8-10次', '腿举 3组 x 12-15次', '保加利亚深蹲 3组 x 12次'] },
-							{ day: '周五', focus: '肩部', exercises: ['哑铃肩推 4组 x 8-10次', '侧平举 4组 x 12-15次', '阿诺德推举 3组 x 15次', '前平举 3组 x 12次'] },
-							{ day: '周六', focus: '手臂', exercises: ['哑铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] }
-						],
-						"6": [
-							{ day: '周一', focus: '胸部', exercises: ['杠铃卧推 4组 x 8-10次', '上斜卧推 4组 x 10-12次', '哑铃飞鸟 3组 x 12-15次', '双杠臂屈伸 3组 x 8-12次'] },
-							{ day: '周二', focus: '背部', exercises: ['引体向上 4组 x 8-10次', '杠铃划船 4组 x 8-10次', '坐姿划船 3组 x 10-12次', '高位下拉 3组 x 12次'] },
-							{ day: '周三', focus: '腿部 (股四头肌)', exercises: ['杠铃深蹲 4组 x 8-10次', '腿举 4组 x 12-15次', '保加利亚深蹲 3组 x 10-12次', '前蹲 3组 x 12-15次'] },
-							{ day: '周四', focus: '肩部', exercises: ['杠铃肩推 4组 x 8-10次', '侧平举 4组 x 12-15次', '阿诺德推举 3组 x 15次', '前平举 3组 x 12次'] },
-							{ day: '周五', focus: '手臂', exercises: ['哑铃弯举 4组 x 10-12次', '窄距卧推 4组 x 8-10次', '锤式弯举 3组 x 12次', '三头肌下压 3组 x 12次'] },
-							{ day: '周六', focus: '腿部 (后链)', exercises: ['罗马尼亚硬拉 4组 x 8-10次', '硬拉 4组 x 12-15次', '保加利亚深蹲 3组 x 15-20次', '哑铃深蹲 4组 x 15-20次'] }
-						]
-					}
-				},
-				// 减脂一周计划
-				1: {
-					"初级": {
-						"3": [
-							{ day: '周一', focus: 'HIIT入门', exercises: ['开合跳 30秒/休息30秒 x 8轮', '高抬腿 30秒/休息30秒 x 6轮', '深蹲 30秒/休息30秒 x 6轮'] },
-							{ day: '周三', focus: '力量循环', exercises: ['徒手深蹲 15次', '俯卧撑 10次', '平板支撑 30秒', '登山者 20次', '重复3轮'] },
-							{ day: '周五', focus: '有氧恢复', exercises: ['快走 20-30分钟', '拉伸 10分钟', '深呼吸练习 5分钟'] }
-						],
-						"4": [
-							{ day: '周一', focus: 'HIIT训练', exercises: ['开合跳 45秒/休息15秒 x 8轮', '波比跳 30秒/休息30秒 x 6轮'] },
-							{ day: '周二', focus: '力量训练', exercises: ['徒手深蹲 3组 x 15次', '俯卧撑 3组 x 10次', '平板支撑 3组 x 45秒'] },
-							{ day: '周四', focus: '有氧训练', exercises: ['快走 25分钟', '登山者 3组 x 30秒', '拉伸 10分钟'] },
-							{ day: '周五', focus: '核心训练', exercises: ['卷腹 3组 x 20次', '俄罗斯转体 3组 x 20次', '死虫式 3组 x 15次'] }
-						],
-						"5": [
-							{ day: '周一', focus: 'HIIT训练', exercises: ['开合跳 45秒/休息15秒 x 8轮', '波比跳 30秒/休息30秒 x 6轮', '高抬腿 30秒/休息30秒 x 6轮'] },
-							{ day: '周二', focus: '上肢力量', exercises: ['俯卧撑 3组 x 10次', '墙面俯卧撑 3组 x 15次', '三头肌撑体 3组 x 8次'] },
-							{ day: '周三', focus: '有氧训练', exercises: ['快走 30分钟', '台阶踏步 10分钟', '拉伸 10分钟'] },
-							{ day: '周五', focus: '下肢训练', exercises: ['徒手深蹲 3组 x 15次', '弓步蹲 3组 x 10次', '小腿提踵 3组 x 20次'] },
-							{ day: '周六', focus: '核心训练', exercises: ['卷腹 3组 x 20次', '俄罗斯转体 3组 x 20次', '平板支撑 3组 x 45秒', '死虫式 3组 x 15次'] }
-						],
-						"6": [
-							{ day: '周一', focus: 'HIIT训练', exercises: ['开合跳 45秒/休息15秒 x 8轮', '波比跳 30秒/休息30秒 x 6轮', '高抬腿 30秒/休息30秒 x 6轮'] },
-							{ day: '周二', focus: '上肢力量', exercises: ['俯卧撑 3组 x 10次', '墙面俯卧撑 3组 x 15次', '三头肌撑体 3组 x 8次'] },
-							{ day: '周三', focus: '有氧训练', exercises: ['快走 30分钟', '台阶踏步 10分钟', '拉伸 10分钟'] },
-							{ day: '周四', focus: '轻度循环', exercises: ['轻度全身循环训练 20分钟', '柔韧性训练 15分钟', '深呼吸放松 5分钟'] },
-							{ day: '周五', focus: '下肢训练', exercises: ['徒手深蹲 3组 x 15次', '弓步蹲 3组 x 10次', '小腿提踵 3组 x 20次'] },
-							{ day: '周六', focus: '核心训练', exercises: ['卷腹 3组 x 20次', '俄罗斯转体 3组 x 20次', '平板支撑 3组 x 45秒', '死虫式 3组 x 15次'] }
-						]
-					},
-					"中级": {
-						"3": [
-							{ day: '周一', focus: '高强度HIIT', exercises: ['波比跳 45秒/休息15秒 x 10轮', '高抬腿跑 45秒/休息15秒 x 8轮'] },
-							{ day: '周三', focus: '力量代谢', exercises: ['深蹲跳 4组 x 12次', '俯卧撑 4组 x 15次', '登山者 4组 x 40秒'] },
-							{ day: '周五', focus: '有氧间歇', exercises: ['跑步间歇 30分钟', '核心训练 15分钟', '拉伸 10分钟'] }
-						],
-						"4": [
-							{ day: '周一', focus: '全身HIIT', exercises: ['波比跳 45秒/15秒休息 x 12轮', '深蹲跳 45秒/15秒休息 x 10轮'] },
-							{ day: '周二', focus: '上肢力量', exercises: ['俯卧撑 4组 x 15次', '钻石俯卧撑 3组 x 8次', '倒立撑墙 3组 x 30秒'] },
-							{ day: '周四', focus: '下肢爆发', exercises: ['深蹲跳 4组 x 15次', '单腿跳 3组 x 10次', '箭步蹲跳 3组 x 12次'] },
-							{ day: '周六', focus: '有氧耐力', exercises: ['中等强度跑步 35分钟', '核心稳定 10分钟', '柔韧性训练 10分钟'] }
-						],
-						"5": [
-							{ day: '周一', focus: '全身HIIT', exercises: ['波比跳 45秒/15秒休息 x 12轮', '深蹲跳 45秒/15秒休息 x 10轮', '登山者 45秒/15秒休息 x 8轮'] },
-							{ day: '周二', focus: '上肢力量', exercises: ['俯卧撑 4组 x 15次', '钻石俯卧撑 3组 x 8次', '倒立撑墙 3组 x 30秒', '三头肌撑体 3组 x 10次'] },
-							{ day: '周三', focus: '核心训练', exercises: ['平板支撑 4组 x 60秒', '俄罗斯转体 4组 x 25次', '卷腹 4组 x 20次', '死虫式 3组 x 15次'] },
-							{ day: '周五', focus: '下肢爆发', exercises: ['深蹲跳 4组 x 15次', '单腿跳 3组 x 10次', '箭步蹲跳 3组 x 12次', '蛙跳 3组 x 8次'] },
-							{ day: '周六', focus: '有氧耐力', exercises: ['中等强度跑步 40分钟', '核心稳定 15分钟', '柔韧性训练 15分钟'] }
-						],
-						"6": [
-							{ day: '周一', focus: '全身HIIT', exercises: ['波比跳 45秒/15秒休息 x 12轮', '深蹲跳 45秒/15秒休息 x 10轮', '登山者 45秒/15秒休息 x 8轮'] },
-							{ day: '周二', focus: '上肢力量', exercises: ['俯卧撑 4组 x 15次', '钻石俯卧撑 3组 x 8次', '倒立撑墙 3组 x 30秒', '三头肌撑体 3组 x 10次'] },
-							{ day: '周三', focus: '核心训练', exercises: ['平板支撑 4组 x 60秒', '俄罗斯转体 4组 x 25次', '卷腹 4组 x 20次', '死虫式 3组 x 15次'] },
-							{ day: '周四', focus: '竞技训练', exercises: ['竞技级间歇训练 40分钟', '爆发力专项训练 20分钟', '恢复拉伸 10分钟'] },
-							{ day: '周五', focus: '下肢爆发', exercises: ['深蹲跳 4组 x 15次', '单腿跳 3组 x 10次', '箭步蹲跳 3组 x 12次', '蛙跳 3组 x 8次'] },
-							{ day: '周六', focus: '有氧耐力', exercises: ['中等强度跑步 45分钟', '核心稳定 15分钟', '柔韧性训练 15分钟'] }
-						]
-					}
-				},
-				// 耐力训练一周计划
-				3: {
-					"初级": {
-						"3": [
-							{ day: '周一', focus: '有氧基础', exercises: ['快走 20-30分钟', '核心训练 10分钟', '拉伸 10分钟'] },
-							{ day: '周三', focus: '力量耐力', exercises: ['深蹲 15次 x 3组', '俯卧撑 10次 x 3组', '平板支撑 30秒 x 3组', '组间休息45秒'] },
-							{ day: '周五', focus: '混合训练', exercises: ['慢跑 15分钟', '功能性训练 15分钟', '柔韧性训练 10分钟'] }
-						],
-						"4": [
-							{ day: '周一', focus: '有氧基础', exercises: ['快走/慢跑 25分钟', '动态拉伸 10分钟'] },
-							{ day: '周二', focus: '力量耐力', exercises: ['循环训练：深蹲、俯卧撑、平板支撑各45秒', '休息15秒', '重复6轮'] },
-							{ day: '周四', focus: '间歇训练', exercises: ['跑步间歇：快跑1分钟/慢跑2分钟 x 8轮', '拉伸 10分钟'] },
-							{ day: '周六', focus: '综合训练', exercises: ['长时间有氧 30分钟', '核心稳定训练 15分钟', '柔韧性训练 15分钟'] }
-						]
-					},
-					"中级": {
-						"3": [
-							{ day: '周一', focus: '有氧间歇', exercises: ['跑步间歇 30分钟', '核心训练 15分钟', '动态恢复 10分钟'] },
-							{ day: '周三', focus: '肌肉耐力', exercises: ['循环训练 40分钟', '功能性动作模式', '稳定性训练'] },
-							{ day: '周五', focus: '混合耐力', exercises: ['长距离有氧 40分钟', '力量耐力训练 20分钟', '恢复训练 10分钟'] }
-						],
-						"4": [
-							{ day: '周一', focus: '心肺耐力', exercises: ['连续跑步 35分钟', '变速跑间歇 10分钟', '拉伸 10分钟'] },
-							{ day: '周二', focus: '力量耐力', exercises: ['全身循环训练 45分钟', '高次数重量训练', '核心稳定 15分钟'] },
-							{ day: '周四', focus: '运动耐力', exercises: ['间歇训练 30分钟', '爆发力训练 15分钟', '恢复训练 10分钟'] },
-							{ day: '周六', focus: '综合耐力', exercises: ['长时间混合训练 50分钟', '柔韧性和恢复训练 20分钟'] }
-						],
-						"5": [
-							{ day: '周一', focus: '心肺耐力', exercises: ['连续跑步 40分钟', '变速跑间歇 15分钟', '拉伸 10分钟'] },
-							{ day: '周二', focus: '力量耐力', exercises: ['全身循环训练 50分钟', '高次数重量训练', '核心稳定 15分钟'] },
-							{ day: '周三', focus: '混合耐力', exercises: ['游泳训练 30分钟', '自行车训练 20分钟', '恢复拉伸 10分钟'] },
-							{ day: '周五', focus: '运动耐力', exercises: ['间歇训练 35分钟', '爆发力训练 15分钟', '恢复训练 10分钟'] },
-							{ day: '周六', focus: '综合耐力', exercises: ['长时间混合训练 60分钟', '柔韧性和恢复训练 20分钟'] }
-						],
-						"6": [
-							{ day: '周一', focus: '心肺耐力', exercises: ['连续跑步 45分钟', '变速跑间歇 15分钟', '拉伸 10分钟'] },
-							{ day: '周二', focus: '力量耐力', exercises: ['全身循环训练 50分钟', '高次数重量训练', '核心稳定 15分钟'] },
-							{ day: '周三', focus: '水中训练', exercises: ['游泳耐力训练 40分钟', '水中阻力训练 15分钟', '恢复游泳 10分钟'] },
-							{ day: '周四', focus: '自行车耐力', exercises: ['长距离骑行 60分钟', '爬坡训练 15分钟', '腿部恢复 10分钟'] },
-							{ day: '周五', focus: '运动耐力', exercises: ['间歇训练 35分钟', '爆发力训练 15分钟', '恢复训练 10分钟'] },
-							{ day: '周六', focus: '综合耐力', exercises: ['长时间混合训练 70分钟', '柔韧性和恢复训练 25分钟'] }
-						],
-						"高级": {
-							"3": [
-								{ day: '周一', focus: '极限耐力', exercises: ['长距离跑步 60分钟', '核心耐力训练 20分钟', '恢复训练 15分钟'] },
-								{ day: '周三', focus: '功能耐力', exercises: ['混合功能训练 60分钟', '高强度循环训练', '专项耐力训练'] },
-								{ day: '周五', focus: '竞技耐力', exercises: ['竞技级耐力训练 70分钟', '专项技能训练 20分钟', '恢复训练 15分钟'] }
-							],
-							"4": [
-								{ day: '周一', focus: '有氧极限', exercises: ['极限有氧训练 70分钟', '心率控制训练', '恢复拉伸 15分钟'] },
-								{ day: '周二', focus: '力量耐力', exercises: ['高强度力量耐力 60分钟', '功能性训练', '核心稳定 20分钟'] },
-								{ day: '周四', focus: '速度耐力', exercises: ['速度耐力训练 50分钟', '间歇冲刺训练', '恢复训练 15分钟'] },
-								{ day: '周六', focus: '综合挑战', exercises: ['综合耐力挑战 80分钟', '多项目混合训练', '深度恢复 20分钟'] }
-							],
-							"5": [
-								{ day: '周一', focus: '有氧极限', exercises: ['极限有氧训练 75分钟', '心率控制训练', '恢复拉伸 15分钟'] },
-								{ day: '周二', focus: '力量耐力', exercises: ['高强度力量耐力 60分钟', '功能性训练', '核心稳定 20分钟'] },
-								{ day: '周三', focus: '专项耐力', exercises: ['专项耐力训练 50分钟', '技能训练 20分钟', '柔韧性训练 15分钟'] },
-								{ day: '周五', focus: '速度耐力', exercises: ['速度耐力训练 55分钟', '间歇冲刺训练', '恢复训练 15分钟'] },
-								{ day: '周六', focus: '综合挑战', exercises: ['综合耐力挑战 90分钟', '多项目混合训练', '深度恢复 25分钟'] }
-							],
-							"6": [
-								{ day: '周一', focus: '有氧极限', exercises: ['极限有氧训练 75分钟', '心率控制训练', '恢复拉伸 15分钟'] },
-								{ day: '周二', focus: '力量耐力', exercises: ['高强度力量耐力 60分钟', '功能性训练', '核心稳定 20分钟'] },
-								{ day: '周三', focus: '水中极限', exercises: ['极限游泳训练 60分钟', '水中耐力挑战', '恢复游泳 15分钟'] },
-								{ day: '周四', focus: '自行车极限', exercises: ['极限骑行训练 90分钟', '爬坡耐力挑战', '腿部恢复 15分钟'] },
-								{ day: '周五', focus: '速度耐力', exercises: ['速度耐力训练 55分钟', '间歇冲刺训练', '恢复训练 15分钟'] },
-								{ day: '周六', focus: '综合挑战', exercises: ['综合耐力挑战 100分钟', '多项目混合训练', '深度恢复 30分钟'] }
-							]
-						}
-					}
-				}
-			};
-		},
-
 		// 开始计划方法
 		startPlan(plan) {
 			const myPlansKey = this.getUserStorageKey('myPlans');
@@ -2265,6 +2072,139 @@ export default {
 				const timeB = new Date(b.createdDate || 0).getTime();
 				return timeB - timeA;
 			});
+		},
+
+		// 查看计划详情
+		viewPlanDetails(plan) {
+			this.currentPlanDetail = { ...plan };
+			this.currentViewWeek = 1; // 重置到第一周
+			this.showPlanDetailModal = true;
+		},
+
+		// 关闭计划详情弹窗
+		closePlanDetailModal() {
+			this.showPlanDetailModal = false;
+			this.currentPlanDetail = {};
+		},
+
+		// 处理计划卡片操作
+		handlePlanCardAction(plan) {
+			if (plan.status === '未开始') {
+				this.startPlan(plan);
+			} else if (plan.status === '已暂停') {
+				this.resumePlan(plan);
+			} else {
+				this.viewPlanDetails(plan);
+			}
+		},
+
+		// 恢复计划
+		resumePlan(plan) {
+			const myPlansKey = this.getUserStorageKey('myPlans');
+			const savedPlans = uni.getStorageSync(myPlansKey) || [];
+			const planIndex = savedPlans.findIndex(p => p.id === plan.id);
+
+			if (planIndex !== -1) {
+				savedPlans[planIndex].status = '进行中';
+				savedPlans[planIndex].statusClass = 'primary';
+				savedPlans[planIndex].actionText = '查看详情';
+				savedPlans[planIndex].resumeDate = new Date().toISOString().split('T')[0];
+
+				uni.setStorageSync(myPlansKey, savedPlans);
+				this.loadMyPlans();
+
+				// 同步计划到首页
+				this.syncPlanToWeeklySchedule(savedPlans[planIndex]);
+
+				uni.showToast({
+					title: '计划已恢复！',
+					icon: 'success'
+				});
+			}
+		},
+
+		// 保存计划预览
+		savePlan() {
+			if (!this.previewPlan || this.previewPlan.length === 0) {
+				uni.showToast({
+					title: '请先生成计划',
+					icon: 'none'
+				});
+				return;
+			}
+
+			// 生成计划标题
+			const goalName = this.goals[this.goalIndex];
+			const levelName = this.levels[this.levelIndex];
+			const daysCount = this.trainingDays[this.daysIndex];
+			const planTitle = `${goalName}训练计划 - ${levelName} - ${daysCount}`;
+
+			// 创建计划对象
+			const planData = {
+				id: Date.now(),
+				title: planTitle,
+				description: `这是一个${levelName}水平的${goalName}训练计划，每周训练${daysCount}。`,
+				goal: goalName,
+				level: levelName,
+				duration: this.planTypeIndex === 1 ? this.planWeeks[this.weeksIndex] : '1周',
+				trainingDays: daysCount,
+				status: '未开始',
+				statusClass: 'warning',
+				progress: '0周/共1周',
+				actionText: '开始计划',
+				createdDate: new Date().toISOString().split('T')[0],
+				exercises: [...this.previewPlan] // 保存生成的训练计划
+			};
+
+			try {
+				// 保存到本地存储
+				const myPlansKey = this.getUserStorageKey('myPlans');
+				const savedPlans = uni.getStorageSync(myPlansKey) || [];
+				savedPlans.unshift(planData);
+				uni.setStorageSync(myPlansKey, savedPlans);
+
+				// 更新显示的计划列表
+				this.loadMyPlans();
+
+				// 关闭预览
+				this.showPreview = false;
+
+				uni.showToast({
+					title: '计划保存成功',
+					icon: 'success',
+					duration: 2000
+				});
+			} catch (error) {
+				console.error('保存计划失败:', error);
+				uni.showToast({
+					title: '保存失败，请重试',
+					icon: 'none'
+				});
+			}
+		},
+
+		// 切换查看周数
+		switchViewWeek(weekNum) {
+			this.currentViewWeek = weekNum;
+		},
+
+		// 获取当前查看周的计划
+		getCurrentWeekPlan() {
+			if (this.currentPlanDetail.weekPlans && this.currentPlanDetail.weekPlans[this.currentViewWeek]) {
+				return this.currentPlanDetail.weekPlans[this.currentViewWeek];
+			}
+			return {};
+		},
+
+		// 处理计划详情页面的操作
+		handlePlanAction() {
+			if (this.currentPlanDetail.status === '未开始') {
+				this.startPlan(this.currentPlanDetail);
+				this.closePlanDetailModal();
+			} else {
+				// 跳转到进度页面或其他相关页面
+				this.navigateTo('progress');
+			}
 		}
 	}
 }
@@ -2275,53 +2215,6 @@ export default {
 .page-container {
 	min-height: 100vh;
 	background-color: var(--light-bg-color);
-}
-
-.top-nav {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 20rpx 40rpx;
-	background-color: #ffffff;
-	box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
-	position: sticky;
-	top: 0;
-	z-index: 100;
-}
-
-.logo {
-	font-size: 40rpx;
-	font-weight: bold;
-	color: var(--primary-color);
-}
-
-.nav-links {
-	display: flex;
-	align-items: center;
-	flex: 1;
-	justify-content: center;
-	margin: 0 40rpx;
-}
-
-.nav-item {
-	padding: 16rpx 30rpx;
-	margin: 0 15rpx;
-	font-size: 30rpx;
-	border-bottom: 4rpx solid transparent;
-	transition: all 0.3s;
-
-	&.active {
-		border-bottom: 4rpx solid var(--primary-color);
-		color: var(--primary-color);
-		font-weight: 500;
-	}
-}
-
-.nav-actions {
-	display: flex;
-	align-items: center;
-	min-width: 120rpx;
-	/* 确保右侧有足够的占位空间 */
 }
 
 .content-container {

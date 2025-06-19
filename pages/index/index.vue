@@ -1,19 +1,7 @@
 <template>
 	<view class="page-container">
-		<!-- 顶部导航 -->
-		<view class="top-nav">
-			<view class="logo">FitTrack</view>
-			<view class="nav-links">
-				<view class="nav-item active">首页</view>
-				<view class="nav-item" @tap="navigateTo('history')">记录</view>
-				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
-				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
-				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
-			</view>
-			<view class="nav-actions">
-				<!-- 右侧占位符，保持布局平衡 -->
-			</view>
-		</view>
+		<!-- 使用全局导航组件 -->
+		<global-nav current-page="index"></global-nav>
 		
 		<view class="container">
 			<!-- 欢迎区域 -->
@@ -23,9 +11,6 @@
 						<text class="section-title">欢迎回来, {{userInfo.name}}!</text>
 					</view>
 					<view class="header-actions">
-						<view class="sync-status" @tap="handleLogout">
-							<text class="sync-text">退出登录</text>
-						</view>
 						<view class="user-avatar">
 							<image src="/static/images/avatar.png" mode="aspectFill"></image>
 						</view>
@@ -244,6 +229,10 @@
 import localDataService from '@/utils/localDataService.js';
 
 export default {
+	// 注册全局导航组件
+	components: {
+		'global-nav': () => import('@/components/global-nav/global-nav.vue')
+	},
 	data() {
 		return {
 			userInfo: {
@@ -318,36 +307,6 @@ export default {
 		}
 	},
 	methods: {
-		// 处理退出登录
-		handleLogout() {
-			uni.showModal({
-				title: '退出确认',
-				content: '确定要退出登录吗？',
-				success: (res) => {
-					if (res.confirm) {
-						// 清除登录信息和用户数据
-						uni.removeStorageSync('userInfo');
-						uni.removeStorageSync('isLoggedIn');
-						
-						// 提示退出成功
-						uni.showToast({
-							title: '已退出登录',
-							icon: 'success'
-						});
-						
-						// 跳转到登录页面
-						setTimeout(() => {
-							uni.reLaunch({
-								url: '/pages/login/login'
-							});
-						}, 1500);
-					}
-				}
-			});
-		},
-		
-
-		
 		navigateTo(page) {
 			uni.reLaunch({
 				url: `/pages/${page}/${page}`

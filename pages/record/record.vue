@@ -1,19 +1,7 @@
 <template>
 	<view class="page-container">
-		<!-- 顶部导航 -->
-		<view class="top-nav">
-			<view class="logo">FitTrack</view>
-			<view class="nav-links">
-				<view class="nav-item" @tap="navigateTo('index')">首页</view>
-				<view class="nav-item" @tap="navigateTo('history')">记录</view>
-				<view class="nav-item" @tap="navigateTo('progress')">进度追踪</view>
-				<view class="nav-item" @tap="navigateTo('plans')">健身计划</view>
-				<view class="nav-item" @tap="navigateTo('workouts')">训练数据库</view>
-			</view>
-			<view class="nav-actions">
-				<button class="btn-sm btn-success" @tap="saveWorkout" :disabled="!hasExercises">保存训练</button>
-			</view>
-		</view>
+		<!-- 使用全局导航组件 -->
+		<global-nav current-page="record"></global-nav>
 		
 		<view class="content-container">
 			<!-- 训练信息卡片 -->
@@ -260,6 +248,10 @@
 import localDataService from '@/utils/localDataService.js';
 
 export default {
+	// 注册全局导航组件
+	components: {
+		'global-nav': () => import('@/components/global-nav/global-nav.vue')
+	},
 	data() {
 		return {
 			// 训练基本信息
