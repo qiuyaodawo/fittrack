@@ -11,11 +11,10 @@
 					<input type="text" class="input email-input" v-model="email" placeholder="邮箱地址" />
 					<view class="custom-input-container">
 						<view class="custom-input" @tap="focusPasswordInput">
-							<input 
+							<input
 								ref="passwordInput"
 								:type="showPassword ? 'text' : 'password'"
-								v-model="password" 
-								@input="validatePassword"
+								v-model="password"
 								@focus="passwordFocused = true"
 								@blur="passwordFocused = false"
 								class="hidden-input"
@@ -35,18 +34,7 @@
 							</view>
 						</view>
 					</view>
-					<!-- 密码提示信息 -->
-					<view class="password-hint" v-if="password">
-						<text class="hint-item" :class="{ 'valid': passwordValidation.length }">
-							长度8-16位 {{ passwordValidation.length ? '✓' : '✗' }}
-						</text>
-						<text class="hint-item" :class="{ 'valid': passwordValidation.hasNumber }">
-							包含数字 {{ passwordValidation.hasNumber ? '✓' : '✗' }}
-						</text>
-						<text class="hint-item" :class="{ 'valid': passwordValidation.hasLetter }">
-							包含英文 {{ passwordValidation.hasLetter ? '✓' : '✗' }}
-						</text>
-					</view>
+
 				</view>
 				
 				<view class="form-options flex-row justify-between align-center">
@@ -79,13 +67,12 @@ export default {
 			password: '',
 			rememberMe: false,
 			showPassword: false,
-			passwordFocused: false,
-			passwordValidation: {
-				length: false,
-				hasNumber: false,
-				hasLetter: false
-			}
+			passwordFocused: false
 		}
+	},
+	onLoad() {
+		// 页面加载时检查是否有保存的登录信息
+		this.loadRememberedCredentials();
 	},
 	methods: {
 		async handleLogin() {
@@ -109,20 +96,27 @@ export default {
 				uni.hideLoading();
 				
 				if (result.success) {
+					// 处理"记住我"功能
+					if (this.rememberMe) {
+						this.saveCredentials();
+					} else {
+						this.clearSavedCredentials();
+					}
+
 					// 登录成功后自动同步数据
 					uni.showLoading({
 						title: '同步数据中...'
 					});
-					
+
 					await localDataService.getAllDataFromCloud();
-					
+
 					uni.hideLoading();
-					
+
 					uni.showToast({
 						title: '登录成功',
 						icon: 'success'
 					});
-					
+
 					// 跳转到主页
 					setTimeout(() => {
 						uni.reLaunch({
@@ -151,16 +145,50 @@ export default {
 		togglePasswordVisibility() {
 			this.showPassword = !this.showPassword;
 		},
-		validatePassword() {
-			const password = this.password;
-			this.passwordValidation = {
-				length: password.length >= 8 && password.length <= 16,
-				hasNumber: /\d/.test(password),
-				hasLetter: /[a-zA-Z]/.test(password)
-			};
-		},
+
 		focusPasswordInput() {
 			this.$refs.passwordInput.focus();
+		},
+
+		// 新增：加载保存的登录凭据
+		loadRememberedCredentials() {
+			try {
+				const savedCredentials = uni.getStorageSync('rememberedCredentials');
+				if (savedCredentials) {
+					this.email = savedCredentials.email || '';
+					this.password = savedCredentials.password || '';
+					this.rememberMe = true;
+
+					console.log('已加载保存的登录信息');
+				}
+			} catch (error) {
+				console.error('加载保存的登录信息失败:', error);
+			}
+		},
+
+		// 新增：保存登录凭据
+		saveCredentials() {
+			try {
+				const credentials = {
+					email: this.email,
+					password: this.password,
+					savedAt: new Date().toISOString()
+				};
+				uni.setStorageSync('rememberedCredentials', credentials);
+				console.log('登录信息已保存');
+			} catch (error) {
+				console.error('保存登录信息失败:', error);
+			}
+		},
+
+		// 新增：清除保存的登录凭据
+		clearSavedCredentials() {
+			try {
+				uni.removeStorageSync('rememberedCredentials');
+				console.log('已清除保存的登录信息');
+			} catch (error) {
+				console.error('清除登录信息失败:', error);
+			}
 		}
 	}
 }
@@ -369,23 +397,7 @@ export default {
 	background-color: #6b7280;
 }
 
-.password-hint {
-	margin-top: 16rpx;
-	margin-bottom: 10rpx;
-	display: flex;
-	flex-direction: column;
-	gap: 8rpx;
-}
 
-.hint-item {
-	font-size: 24rpx;
-	color: #ef4444;
-	line-height: 1.2;
-}
-
-.hint-item.valid {
-	color: #10b981;
-}
 
 .form-options {
 	margin-bottom: 30rpx;
