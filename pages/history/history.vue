@@ -246,7 +246,32 @@ export default {
 	onShow() {
 		this.initializeData();
 	},
+	onLoad() {
+		// 检查登录状态并同步数据
+		this.checkLoginAndSync();
+		this.loadWorkoutHistory();
+	},
 	methods: {
+		// 新增：检查登录状态并同步数据
+		async checkLoginAndSync() {
+			if (localDataService.isLoggedIn) {
+				try {
+					console.log('历史记录页面：开始同步数据...');
+					// 先尝试从服务器获取最新数据
+					await localDataService.pullAllDataFromServer();
+					
+					// 同步完成后重新加载页面数据
+					setTimeout(() => {
+						this.loadWorkoutHistory();
+					}, 500);
+					
+					console.log('历史记录页面：数据同步完成');
+				} catch (error) {
+					console.error('历史记录页面：数据同步失败:', error);
+				}
+			}
+		},
+		
 		navigateTo(page) {
 			uni.reLaunch({
 				url: `/pages/${page}/${page}`

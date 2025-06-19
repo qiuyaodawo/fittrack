@@ -853,8 +853,7 @@ export default {
 		},
 				// 保存训练
 		async saveWorkout() {
-			// 验证表单
-			if (!this.workoutInfo.name) {
+			if (!this.workoutInfo.name.trim()) {
 				uni.showToast({
 					title: '请输入训练名称',
 					icon: 'none'
@@ -870,222 +869,118 @@ export default {
 				return;
 			}
 			
-			// 验证每个动作的数据
-			let hasInvalidData = false;
-			let missingFields = [];
-			
-			this.selectedExercises.forEach(exercise => {
-				// 次数必填
-				if (!exercise.reps) {
-					hasInvalidData = true;
-					if (!missingFields.includes('次数')) {
-						missingFields.push('次数');
+			// 验证每个动作的必填字段
+			for (let i = 0; i < this.selectedExercises.length; i++) {
+				const exercise = this.selectedExercises[i];
+				
+				// 检查非自重动作的重量字段
+				if (!this.isBodyweightExercise(exercise.name)) {
+					if (!exercise.weight || exercise.weight === '' || parseFloat(exercise.weight) <= 0) {
+						uni.showToast({
+							title: `${exercise.name} 请输入重量`,
+							icon: 'none'
+						});
+						return;
 					}
 				}
 				
-				// 器械动作重量必填
-				if (!this.isBodyweightExercise(exercise.name) && !exercise.weight) {
-					hasInvalidData = true;
-					if (!missingFields.includes('重量')) {
-						missingFields.push('重量');
-					}
-				}
-			});
-			
-			if (hasInvalidData) {
-				uni.showToast({
-					title: `请完善所有动作的${missingFields.join('和')}`,
-					icon: 'none'
-				});
-				return;
-			}
-			
-			// 显示保存中状态
-			uni.showLoading({
-				title: '保存中...'
-			});
-			
-			try {
-				// 构造训练记录数据，将新格式转换为标准格式
-				const now = new Date();
-				const convertedExercises = this.selectedExercises.map(exercise => {
-					// 根据组数创建sets数组
-					const sets = [];
-					for (let i = 0; i < exercise.setsCount; i++) {
-						const setData = {
-							reps: exercise.reps,
-							rest: exercise.rest
-						};
-						
-						// 只有非自重动作才保存重量
-						if (!this.isBodyweightExercise(exercise.name) && exercise.weight) {
-							setData.weight = exercise.weight;
-						}
-						
-						sets.push(setData);
-					}
-					
-					return {
-						...exercise,
-						sets: sets
-					};
-				});
-				
-				const workoutData = {
-					id: Date.now(),
-					name: this.workoutInfo.name,
-					type: '力量训练',
-					date: this.workoutInfo.date,
-					startTime: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'),
-					exercises: convertedExercises,
-					status: '已完成'
-				};
-				
-				// 保存到本地存储（按用户隔离）
-				const userInfo = uni.getStorageSync('userInfo');
-				const storageKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
-				
-				let workoutHistory = uni.getStorageSync(storageKey) || [];
-				workoutHistory.unshift(workoutData);
-				uni.setStorageSync(storageKey, workoutHistory);
-				
-				// 检查并更新个人记录
-				this.checkForNewRecords(workoutData);
-				
-				// 尝试同步到本地服务器
-				if (localDataService.isLoggedIn) {
-					try {
-						await localDataService.syncWorkoutHistory();
-						console.log('训练记录已同步到本地服务器');
-					} catch (syncError) {
-						console.error('本地服务器同步失败，但数据已保存到本地:', syncError);
-						// 同步失败不影响本地保存
-					}
-				}
-				
-				uni.hideLoading();
-				uni.showToast({
-					title: '训练记录保存成功',
-					icon: 'success',
-					duration: 2000
-				});
-				
-				// 2秒后返回首页
-				setTimeout(() => {
-					uni.reLaunch({
-						url: '/pages/index/index'
+				// 检查次数字段
+				if (!exercise.reps || exercise.reps === '' || parseInt(exercise.reps) <= 0) {
+					uni.showToast({
+						title: `${exercise.name} 请输入次数`,
+						icon: 'none'
 					});
-				}, 2000);
+					return;
+				}
 				
-			} catch (error) {
-				uni.hideLoading();
-				console.error('保存训练记录失败:', error);
-				uni.showToast({
-					title: '保存失败，请重试',
-					icon: 'none'
-				});
+				// 检查组数
+				if (!exercise.setsCount || exercise.setsCount <= 0) {
+					uni.showToast({
+						title: `${exercise.name} 组数必须大于0`,
+						icon: 'none'
+					});
+					return;
+				}
 			}
-		},
-		
-
-		
-		// 检查是否有新的个人记录
-		checkForNewRecords(workoutData) {
-			const userInfo = uni.getStorageSync('userInfo');
-			const personalRecordsKey = userInfo && userInfo.id ? `personalRecords_${userInfo.id}` : 'personalRecords';
-			const savedRecords = uni.getStorageSync(personalRecordsKey) || {};
-			let newRecords = [];
 			
-			// 动作名称映射（与进度页面保持一致）
-			const exerciseMapping = {
-				'杠铃卧推': '杠铃卧推',
-				'哑铃卧推': '哑铃卧推',
-				'上斜卧推': '上斜卧推',
-				'下斜卧推': '下斜卧推',
-				'哑铃飞鸟': '哑铃飞鸟',
-				'俯卧撑': '俯卧撑',
-				'双杠臂屈伸': '双杠臂屈伸',
-				'引体向上': '引体向上',
-				'杠铃划船': '杠铃划船',
-				'哑铃划船': '哑铃划船',
-				'高位下拉': '高位下拉',
-				'坐姿划船': '坐姿划船',
-				'T杠划船': 'T杠划船',
-				'面拉': '面拉',
-				'杠铃深蹲': '杠铃深蹲',
-				'前蹲': '前蹲',
-				'哑铃深蹲': '哑铃深蹲',
-				'保加利亚深蹲': '保加利亚深蹲',
-				'腿举': '腿举',
-				'罗马尼亚硬拉': '罗马尼亚硬拉',
-				'硬拉': '硬拉',
-				'杠铃肩推': '杠铃肩推',
-				'哑铃肩推': '哑铃肩推',
-				'侧平举': '侧平举',
-				'前平举': '前平举',
-				'阿诺德推举': '阿诺德推举',
-				'倒立撑': '倒立撑',
-				'杠铃弯举': '杠铃弯举',
-				'哑铃弯举': '哑铃弯举',
-				'锤式弯举': '锤式弯举',
-				'窄距卧推': '窄距卧推',
-				'三头肌下压': '三头肌下压',
-				'臂屈伸': '臂屈伸',
-				'平板支撑': '平板支撑',
-				'卷腹': '卷腹',
-				'俄罗斯转体': '俄罗斯转体',
-				'登山者': '登山者',
-				'死虫': '死虫',
-				'鸟狗式': '鸟狗式'
+			// 构建训练记录数据
+			const workoutRecord = {
+				id: Date.now(),
+				name: this.workoutInfo.name,
+				type: '力量训练', // 默认类型，可以根据动作类型智能推断
+				date: this.workoutInfo.date,
+				startTime: new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0'),
+				exercises: this.processExercisesForSave(),
+				status: '已完成'
 			};
 			
-			workoutData.exercises.forEach(exercise => {
-				const standardName = exerciseMapping[exercise.name];
-				if (standardName) {
-					exercise.sets.forEach(set => {
-						const weight = parseFloat(set.weight);
-						if (!isNaN(weight) && weight > 0) {
-							const currentRecord = savedRecords[standardName];
-							if (!currentRecord || weight > currentRecord.weight) {
-								newRecords.push({
-									exercise: standardName,
-									weight: weight,
-									previousWeight: currentRecord ? currentRecord.weight : 0
-								});
-								
-								// 更新保存的记录
-								savedRecords[standardName] = {
-									weight: weight,
-									date: workoutData.date
-								};
-							}
-						}
-					});
+			// 保存到本地存储
+			const userInfo = uni.getStorageSync('userInfo');
+			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
+			let workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
+			
+			workoutHistory.unshift(workoutRecord);
+			uni.setStorageSync(workoutHistoryKey, workoutHistory);
+			
+			// 如果用户已登录，自动同步到服务器
+			if (localDataService.isLoggedIn) {
+				try {
+					await localDataService.syncWorkoutToServer(workoutRecord);
+					console.log('训练记录已同步到服务器');
+				} catch (error) {
+					console.error('同步训练记录失败:', error);
+					// 同步失败不影响本地保存
 				}
+			}
+			
+			uni.showToast({
+				title: '训练记录保存成功',
+				icon: 'success',
+				duration: 2000
 			});
 			
-			// 保存更新的记录
-			if (newRecords.length > 0) {
-				uni.setStorageSync(personalRecordsKey, savedRecords);
-				
-				// 显示新记录通知
-				let message = '恭喜！创造了新个人记录：\n';
-				newRecords.forEach(record => {
-					const improvement = record.previousWeight > 0 ? 
-						` (+${(record.weight - record.previousWeight).toFixed(1)}kg)` : '';
-					message += `${record.exercise}: ${record.weight}kg${improvement}\n`;
+			// 清空表单
+			this.resetForm();
+			
+			// 跳转到历史记录页面
+			setTimeout(() => {
+				uni.reLaunch({
+					url: '/pages/history/history'
 				});
+			}, 1500);
+		},
+		
+		// 处理动作数据以便保存
+		processExercisesForSave() {
+			return this.selectedExercises.map(exercise => {
+				// 为每个动作生成组数据
+				const sets = [];
+				const setsCount = exercise.setsCount || 1;
 				
-				setTimeout(() => {
-					uni.showModal({
-						title: '🏆 新个人记录！',
-						content: message,
-						showCancel: false,
-						confirmText: '太棒了！'
+				for (let i = 0; i < setsCount; i++) {
+					sets.push({
+						weight: this.isBodyweightExercise(exercise.name) ? '0' : (exercise.weight || '0'),
+						reps: exercise.reps || '1',
+						rest: exercise.rest || '90'
 					});
-				}, 2500); // 在保存成功提示后显示
-			}
-		}
+				}
+				
+				return {
+					name: exercise.name,
+					sets: sets,
+					notes: exercise.notes || ''
+				};
+			});
+		},
+		
+		// 重置表单
+		resetForm() {
+			this.workoutInfo.name = '训练记录';
+			this.selectedExercises = [];
+			this.setCountInputs = {};
+		},
+		
+		// ...existing methods...
 	}
 }
 </script>

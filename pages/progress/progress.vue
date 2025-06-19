@@ -22,24 +22,79 @@
 							<text class="pr-date">{{weightChangeInfo.date}}</text>
 						</view>
 						
-						<!-- 近7天体重变化条形图 -->
+						<!-- 近7天体重变化折线图 -->
 						<view class="weight-chart" v-if="weightChangeInfo.chartData.length > 0">
 							<text class="chart-title">近7天变化</text>
-							<view class="bar-chart">
-								<view class="chart-bars">
-									<view 
-										class="chart-bar-item" 
-										v-for="(item, index) in weightChangeInfo.chartData" 
+							<view class="line-chart">
+								<view class="chart-container">
+									<!-- Y轴刻度 -->
+									<view class="y-axis">
+										<view
+											class="y-axis-label"
+											v-for="(label, index) in weightChangeInfo.yAxisLabels"
+											:key="index"
+											:style="{ bottom: (index * 25) + '%' }"
+										>
+											{{label}}kg
+										</view>
+									</view>
+
+									<!-- 图表区域 -->
+									<view class="chart-area">
+										<!-- 网格线 -->
+										<view class="grid-lines">
+											<view
+												class="grid-line"
+												v-for="n in 4"
+												:key="n"
+												:style="{ bottom: (n * 25) + '%' }"
+											></view>
+										</view>
+
+										<!-- 折线和数据点 -->
+										<svg class="line-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+											<!-- 折线路径 -->
+											<polyline
+												:points="weightChangeInfo.linePoints"
+												fill="none"
+												stroke="#3b82f6"
+												stroke-width="0.8"
+												v-if="weightChangeInfo.linePoints"
+											/>
+
+											<!-- 数据点 -->
+											<circle
+												v-for="(point, index) in weightChangeInfo.dataPoints"
+												:key="index"
+												:cx="point.x"
+												:cy="point.y"
+												r="1.5"
+												fill="#3b82f6"
+												v-if="point.hasData"
+											/>
+										</svg>
+
+										<!-- 数据标签 -->
+										<view
+											class="data-point"
+											v-for="(item, index) in weightChangeInfo.chartData"
+											:key="index"
+											:style="getPointStyle(item, index)"
+											v-if="item.weight"
+										>
+											<text class="point-value">{{item.weight}}kg</text>
+										</view>
+									</view>
+								</view>
+
+								<!-- X轴标签 -->
+								<view class="x-axis">
+									<view
+										class="x-axis-label"
+										v-for="(item, index) in weightChangeInfo.chartData"
 										:key="index"
 									>
-										<view 
-											class="chart-bar"
-											:class="{'no-data': item.weight === null}"
-											:style="getBarStyle(item)"
-										>
-											<text class="bar-value" v-if="item.weight">{{item.weight}}kg</text>
-										</view>
-										<text class="bar-label">{{item.dateLabel}}</text>
+										{{item.dateLabel}}
 									</view>
 								</view>
 							</view>
@@ -541,6 +596,14 @@ export default {
 		
 
 	},
+	onLoad() {
+		// 检查登录状态并同步数据
+		this.checkLoginAndSync();
+		this.loadPersonalRecords();
+		this.loadRecentWorkouts();
+		this.loadBodyWeightData();
+	},
+	
 	methods: {
 		navigateTo(page) {
 			uni.reLaunch({
@@ -1099,37 +1162,46 @@ export default {
 		loadWeightChangeInfo() {
 			const weightHistoryKey = this.getUserStorageKey('weightHistory');
 			const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
-			
+
 			if (weightHistory.length === 0) {
 				this.weightChangeInfo = {
 					current: null,
 					change: null,
 					date: null,
-					chartData: []
+					chartData: [],
+					yAxisLabels: [],
+					linePoints: '',
+					dataPoints: []
 				};
 				return;
 			}
-			
+
 			// 按日期排序（最新的在前面）
 			weightHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-			
+
 			const currentRecord = weightHistory[0];
 			let change = null;
-			
+
 			// 如果有至少两条记录，计算变化
 			if (weightHistory.length >= 2) {
 				const previousRecord = weightHistory[1];
 				change = Math.round((currentRecord.weight - previousRecord.weight) * 10) / 10;
 			}
-			
+
 			// 获取近7天的数据用于图表
 			const chartData = this.getLast7DaysWeightData(weightHistory);
-			
+
+			// 计算折线图数据
+			const lineChartData = this.calculateLineChartData(chartData);
+
 			this.weightChangeInfo = {
 				current: currentRecord.weight,
 				change: change,
 				date: currentRecord.date,
-				chartData: chartData
+				chartData: chartData,
+				yAxisLabels: lineChartData.yAxisLabels,
+				linePoints: lineChartData.linePoints,
+				dataPoints: lineChartData.dataPoints
 			};
 		},
 		
@@ -1137,73 +1209,137 @@ export default {
 		getLast7DaysWeightData(weightHistory) {
 			const today = new Date();
 			const chartData = [];
-			
+
 			// 生成近7天的日期
 			for (let i = 6; i >= 0; i--) {
 				const date = new Date(today);
 				date.setDate(today.getDate() - i);
 				const dateString = date.toISOString().split('T')[0];
-				
+
 				// 查找该日期的体重记录
 				const record = weightHistory.find(r => r.date === dateString);
-				
+
 				chartData.push({
 					date: dateString,
 					dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
 					weight: record ? record.weight : null
 				});
 			}
-			
+
 			return chartData;
+		},
+
+		// 计算折线图数据
+		calculateLineChartData(chartData) {
+			// 获取所有有效的体重数据
+			const validWeights = chartData
+				.filter(item => item.weight !== null)
+				.map(item => item.weight);
+
+			if (validWeights.length === 0) {
+				return {
+					yAxisLabels: [],
+					linePoints: '',
+					dataPoints: []
+				};
+			}
+
+			// 计算Y轴范围，确保比例正确
+			const minWeight = Math.min(...validWeights);
+			const maxWeight = Math.max(...validWeights);
+
+			// 如果只有一个数据点或者数据差异很小，设置合理的显示范围
+			let yMin, yMax;
+			if (validWeights.length === 1 || (maxWeight - minWeight) < 2) {
+				const avgWeight = (minWeight + maxWeight) / 2;
+				yMin = Math.max(0, avgWeight - 2); // 最小不低于0
+				yMax = avgWeight + 2;
+			} else {
+				// 添加10%的边距使图表更美观
+				const range = maxWeight - minWeight;
+				const margin = range * 0.1;
+				yMin = Math.max(0, minWeight - margin);
+				yMax = maxWeight + margin;
+			}
+
+			// 生成Y轴标签（5个刻度）
+			const yAxisLabels = [];
+			for (let i = 0; i < 5; i++) {
+				const value = yMin + (yMax - yMin) * (i / 4);
+				yAxisLabels.push(Math.round(value * 10) / 10);
+			}
+
+			// 计算折线点坐标和数据点
+			const linePoints = [];
+			const dataPoints = [];
+
+			chartData.forEach((item, index) => {
+				const x = (index / (chartData.length - 1)) * 100; // X坐标百分比
+
+				if (item.weight !== null) {
+					// 计算Y坐标百分比（注意SVG坐标系Y轴向下）
+					const y = 100 - ((item.weight - yMin) / (yMax - yMin)) * 100;
+					linePoints.push(`${x},${y}`);
+
+					dataPoints.push({
+						x: x,
+						y: y,
+						hasData: true
+					});
+				} else {
+					dataPoints.push({
+						x: x,
+						y: 0,
+						hasData: false
+					});
+				}
+			});
+
+			return {
+				yAxisLabels: yAxisLabels,
+				linePoints: linePoints.join(' '),
+				dataPoints: dataPoints
+			};
 		},
 		
 
-		
-		// 计算条形图样式
-		getBarStyle(item) {
+
+		// 获取数据点样式
+		getPointStyle(item, index) {
 			if (!item.weight) {
-				return {
-					height: '15rpx',
-					backgroundColor: '#e5e7eb',
-					opacity: '0.5'
-				};
+				return { display: 'none' };
 			}
-			
-			// 获取所有有效体重数据来计算相对高度
-			const validWeights = this.weightChangeInfo.chartData
-				.filter(item => item.weight !== null)
-				.map(item => item.weight);
-			
-			if (validWeights.length === 0) {
-				return { height: '0' };
-			}
-			
-			// 如果只有一个数据点，使用固定高度
-			if (validWeights.length === 1) {
-				return {
-					height: '120rpx',
-					backgroundColor: 'var(--primary-color)'
-				};
-			}
-			
-			const minWeight = Math.min(...validWeights);
-			const maxWeight = Math.max(...validWeights);
-			let range = maxWeight - minWeight;
-			
-			// 如果体重差异太小（小于0.5kg），设置最小显示范围
-			if (range < 0.5) {
-				range = 0.5;
-			}
-			
-			// 计算相对高度，最小60rpx，最大200rpx
-			const normalizedValue = (item.weight - minWeight) / range;
-			const barHeight = 60 + normalizedValue * 140;
-			
+
+			// 计算X轴位置
+			const xPercent = (index / (this.weightChangeInfo.chartData.length - 1)) * 100;
+
 			return {
-				height: `${barHeight}rpx`,
-				backgroundColor: 'var(--primary-color)'
+				left: `${xPercent}%`,
+				transform: 'translateX(-50%)'
 			};
-		}
+		},
+		
+		// 新增：检查登录状态并同步数据
+		async checkLoginAndSync() {
+			if (localDataService.isLoggedIn) {
+				try {
+					console.log('进度页面：开始同步数据...');
+					// 先尝试从服务器获取最新数据
+					await localDataService.pullAllDataFromServer();
+					
+					// 同步完成后重新加载页面数据
+					setTimeout(() => {
+						this.loadPersonalRecords();
+						this.loadRecentWorkouts();
+						this.loadBodyWeightData();
+					}, 500);
+					
+					console.log('进度页面：数据同步完成');
+				} catch (error) {
+					console.error('进度页面：数据同步失败:', error);
+				}
+			}
+		},
 	}
 }
 </script>
@@ -1593,7 +1729,7 @@ export default {
 	font-weight: 500;
 }
 
-.bar-chart {
+.line-chart {
 	width: 100%;
 	background-color: #ffffff;
 	border-radius: 12rpx;
@@ -1603,53 +1739,92 @@ export default {
 	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
-.chart-bars {
+.chart-container {
 	display: flex;
-	justify-content: space-between;
-	align-items: flex-end;
 	height: 300rpx;
-	padding: 40rpx 10rpx 0 10rpx;
+	position: relative;
 }
 
-.chart-bar-item {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	flex: 1;
-	margin: 0 5rpx;
-}
-
-.chart-bar {
-	width: 30rpx;
-	margin: 0 auto 10rpx auto;
-	border-radius: 4rpx;
+.y-axis {
+	width: 60rpx;
 	position: relative;
 	display: flex;
-	align-items: flex-end;
-	justify-content: center;
-	transition: all 0.3s ease;
-	
-	&.no-data {
-		background-color: #e5e7eb !important;
-		opacity: 0.5;
-	}
+	flex-direction: column;
+	justify-content: space-between;
+	padding-right: 10rpx;
 }
 
-.bar-value {
+.y-axis-label {
 	position: absolute;
-	top: -30rpx;
+	right: 10rpx;
+	font-size: 20rpx;
+	color: #6b7280;
+	transform: translateY(50%);
+	white-space: nowrap;
+}
+
+.chart-area {
+	flex: 1;
+	position: relative;
+	margin-left: 10rpx;
+}
+
+.grid-lines {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+.grid-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 1rpx;
+	background-color: #f1f5f9;
+}
+
+.line-svg {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 2;
+}
+
+.data-point {
+	position: absolute;
+	top: 0;
+	z-index: 3;
+	transform: translateY(-50%);
+}
+
+.point-value {
 	font-size: 20rpx;
 	font-weight: bold;
-	color: var(--text-color);
+	color: var(--primary-color);
+	background-color: rgba(255, 255, 255, 0.9);
+	padding: 4rpx 8rpx;
+	border-radius: 4rpx;
 	white-space: nowrap;
-	left: 50%;
-	transform: translateX(-50%);
+	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 }
 
-.bar-label {
+.x-axis {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 15rpx;
+	padding-left: 70rpx;
+}
+
+.x-axis-label {
 	font-size: 22rpx;
 	color: #6b7280;
 	font-weight: 500;
+	text-align: center;
+	flex: 1;
 }
 
 .empty-text {

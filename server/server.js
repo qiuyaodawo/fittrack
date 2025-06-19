@@ -375,6 +375,57 @@ app.get('/api/data/plans', authenticateToken, (req, res) => {
     );
 });
 
+// 新增：同步体重数据
+app.post('/api/data/sync-body-weight', authenticateToken, (req, res) => {
+    const { bodyWeight } = req.body;
+    const userId = req.user.userId;
+
+    const dataContent = JSON.stringify(bodyWeight);
+
+    db.run(
+        `INSERT OR REPLACE INTO user_data (id, user_id, data_type, data_content, updated_at) 
+         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [`${userId}_body_weight`, userId, 'body_weight', dataContent],
+        function(err) {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: '同步体重数据失败'
+                });
+            }
+
+            res.json({
+                success: true,
+                message: '体重数据同步成功'
+            });
+        }
+    );
+});
+
+// 新增：获取体重数据
+app.get('/api/data/body-weight', authenticateToken, (req, res) => {
+    const userId = req.user.userId;
+
+    db.get(
+        'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ?',
+        [userId, 'body_weight'],
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: '获取体重数据失败'
+                });
+            }
+
+            const bodyWeight = row ? JSON.parse(row.data_content) : [];
+            res.json({
+                success: true,
+                data: bodyWeight
+            });
+        }
+    );
+});
+
 // 获取所有数据
 app.get('/api/data/all', authenticateToken, (req, res) => {
     const userId = req.user.userId;

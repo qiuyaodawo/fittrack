@@ -297,6 +297,15 @@ export default {
 		// 加载自定义动作
 		this.loadCustomExercises();
 	},
+	onLoad() {
+		this.loadQuickStats();
+		this.loadRecentWorkouts();
+		this.loadPersonalRecords();
+		this.loadBodyWeight();
+		
+		// 检查登录状态并自动同步数据
+		this.checkLoginAndSync();
+	},
 	onMounted() {
 		// TabBar补丁 - 确保useShowTabBar不会报错
 		if (typeof window !== 'undefined') {
@@ -1012,7 +1021,29 @@ export default {
 				// 没有计划，添加新计划
 				this.addDayPlan(day);
 			}
-		}
+		},
+		// 新增：检查登录状态并同步数据
+		async checkLoginAndSync() {
+			if (localDataService.isLoggedIn) {
+				try {
+					console.log('用户已登录，开始同步数据...');
+					// 执行后台数据同步
+					await localDataService.autoSync();
+					
+					// 同步完成后重新加载页面数据
+					setTimeout(() => {
+						this.loadQuickStats();
+						this.loadRecentWorkouts();
+						this.loadPersonalRecords();
+						this.loadBodyWeight();
+					}, 1000);
+					
+					console.log('数据同步完成');
+				} catch (error) {
+					console.error('数据同步失败:', error);
+				}
+			}
+		},
 	}
 }
 </script>
