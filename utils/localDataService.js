@@ -234,9 +234,9 @@ class LocalDataService {
 	// 同步健身计划
 	async syncPlans() {
 		if (!this.isLoggedIn) return { success: false, message: '用户未登录' };
-		
+
 		try {
-			const plans = uni.getStorageSync('fitnessPlans') || [];
+			const plans = uni.getStorageSync('myPlans') || [];
 			
 			const result = await this.request('/data/sync-plans', {
 				method: 'POST',
@@ -287,7 +287,7 @@ class LocalDataService {
 					uni.setStorageSync('personalRecords', personal_records);
 				}
 				if (plans) {
-					uni.setStorageSync('fitnessPlans', plans);
+					uni.setStorageSync('myPlans', plans);
 				}
 			}
 			

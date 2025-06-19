@@ -125,7 +125,7 @@ export default {
 					
 					// 跳转到主页
 					setTimeout(() => {
-						uni.switchTab({
+						uni.reLaunch({
 							url: '/pages/index/index'
 						});
 					}, 1000);

@@ -141,7 +141,7 @@
 </template>
 
 <script>
-import cloudDataService from '@/utils/cloudDataService.js';
+import localDataService from '@/utils/localDataService.js';
 
 export default {
 	data() {
@@ -950,11 +950,11 @@ export default {
 		// 数据同步方法
 		async syncData() {
 			if (this.syncStatus.syncing) return;
-			
-			if (!cloudDataService.isLoggedIn) {
+
+			if (!localDataService.isLoggedIn) {
 				uni.showModal({
 					title: '提示',
-					content: '需要登录云端账号才能同步数据，是否前往登录？',
+					content: '需要登录账号才能同步数据，是否前往登录？',
 					success: (res) => {
 						if (res.confirm) {
 							uni.navigateTo({
@@ -965,22 +965,22 @@ export default {
 				});
 				return;
 			}
-			
+
 			this.syncStatus.syncing = true;
 			this.syncStatus.icon = '⏳';
 			this.syncStatus.text = '同步中...';
-			
+
 			try {
-				const result = await cloudDataService.autoSync();
-				
+				const result = await localDataService.autoSync();
+
 				if (result.success) {
 					this.syncStatus.icon = '✅';
 					this.syncStatus.text = '同步成功';
-					
+
 					// 重新加载数据
 					this.updatePersonalRecordsWithManualData();
 					this.updateStrengthProgress();
-					
+
 					uni.showToast({
 						title: '数据同步成功',
 						icon: 'success'
@@ -988,7 +988,7 @@ export default {
 				} else {
 					this.syncStatus.icon = '❌';
 					this.syncStatus.text = '同步失败';
-					
+
 					uni.showToast({
 						title: result.message || '同步失败',
 						icon: 'none'
@@ -997,15 +997,15 @@ export default {
 			} catch (error) {
 				this.syncStatus.icon = '❌';
 				this.syncStatus.text = '同步失败';
-				
+
 				uni.showToast({
 					title: '网络错误',
 					icon: 'none'
 				});
 			}
-			
+
 			this.syncStatus.syncing = false;
-			
+
 			// 3秒后恢复初始状态
 			setTimeout(() => {
 				this.updateSyncStatus();
@@ -1014,10 +1014,10 @@ export default {
 		
 		// 更新同步状态
 		updateSyncStatus() {
-			if (cloudDataService.isLoggedIn) {
+			if (localDataService.isLoggedIn) {
 				this.syncStatus = {
-					icon: '☁️',
-					text: '云端已连接',
+					icon: '🔗',
+					text: '服务器已连接',
 					syncing: false
 				};
 			} else {
