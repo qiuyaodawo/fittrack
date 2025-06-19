@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端导航测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* 模拟uni-app的rpx单位 */
+        .global-nav {
+            background-color: #ffffff;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 0.5px solid #e5e7eb;
+        }
+
+        /* 桌面端导航样式 */
+        .desktop-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #3b82f6;
+            flex-shrink: 0;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+            margin: 0 20px;
+            gap: 5px;
+        }
+
+        .nav-item {
+            padding: 8px 15px;
+            font-size: 15px;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .nav-item:hover {
+            background-color: #f8fafc;
+            color: #3b82f6;
+        }
+
+        .nav-item.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 500;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            min-width: 80px;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .login-btn {
+            padding: 6px 12px;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .login-btn:hover {
+            background-color: #2563eb;
+        }
+
+        /* 移动端导航样式 */
+        .mobile-nav {
+            display: none;
+        }
+
+        .mobile-nav-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+        }
+
+        .mobile-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mobile-login-btn {
+            padding: 4px 8px;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* 汉堡菜单按钮样式 */
+        .hamburger-menu {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .hamburger-menu:active {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .hamburger-line {
+            width: 15px;
+            height: 1.5px;
+            background-color: #374151;
+            margin: 1.5px 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1px;
+        }
+
+        .hamburger-menu.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(4.5px, 4.5px);
+            background-color: #3b82f6;
+        }
+
+        .hamburger-menu.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-menu.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(4.5px, -4.5px);
+            background-color: #3b82f6;
+        }
+
+        /* 移动端导航菜单样式 */
+        .mobile-nav-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 80%;
+            max-width: 200px;
+            height: 100vh;
+            background-color: #ffffff;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.15);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+            overflow-y: auto;
+        }
+
+        .mobile-nav-menu.show {
+            right: 0;
+        }
+
+        .mobile-nav-content {
+            padding: 60px 0 30px 0;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 0.5px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .mobile-nav-item:active {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .mobile-nav-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid #3b82f6;
+        }
+
+        .nav-icon {
+            font-size: 16px;
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-text {
+            font-size: 16px;
+            color: #374151;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .mobile-nav-item.active .nav-text {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+
+        .nav-arrow {
+            font-size: 14px;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        /* 移动端遮罩层 */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* 响应式设计 */
+        @media screen and (max-width: 768px) {
+            .desktop-nav {
+                display: none;
+            }
+            
+            .mobile-nav {
+                display: block;
+            }
+        }
+
+        @media screen and (min-width: 769px) {
+            .mobile-nav {
+                display: none !important;
+            }
+            
+            .desktop-nav {
+                display: flex !important;
+            }
+        }
+
+        /* 测试内容样式 */
+        .test-content {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .test-description {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .status-desktop {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-mobile {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+    </style>
+</head>
+<body>
+    <!-- 全局导航组件 -->
+    <div class="global-nav">
+        <!-- 桌面端导航布局 -->
+        <div class="desktop-nav">
+            <div class="logo">FitTrack</div>
+            <div class="nav-links">
+                <div class="nav-item active">首页</div>
+                <div class="nav-item">记录</div>
+                <div class="nav-item">进度追踪</div>
+                <div class="nav-item">健身计划</div>
+                <div class="nav-item">训练数据库</div>
+            </div>
+            <div class="nav-actions">
+                <button class="login-btn">登录</button>
+            </div>
+        </div>
+
+        <!-- 移动端导航布局 -->
+        <div class="mobile-nav">
+            <div class="mobile-nav-header">
+                <div class="logo">FitTrack</div>
+                <div class="mobile-nav-right">
+                    <button class="mobile-login-btn">登录</button>
+                    
+                    <!-- 汉堡菜单按钮 -->
+                    <div class="hamburger-menu" onclick="toggleMobileMenu()">
+                        <div class="hamburger-line"></div>
+                        <div class="hamburger-line"></div>
+                        <div class="hamburger-line"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 移动端折叠导航菜单 -->
+            <div class="mobile-nav-menu" id="mobileNavMenu">
+                <div class="mobile-nav-content">
+                    <div class="mobile-nav-item active" onclick="navigateToMobile('index')">
+                        <div class="nav-icon">🏠</div>
+                        <div class="nav-text">首页</div>
+                        <div class="nav-arrow">→</div>
+                    </div>
+                    <div class="mobile-nav-item" onclick="navigateToMobile('history')">
+                        <div class="nav-icon">📝</div>
+                        <div class="nav-text">记录</div>
+                    </div>
+                    <div class="mobile-nav-item" onclick="navigateToMobile('progress')">
+                        <div class="nav-icon">📊</div>
+                        <div class="nav-text">进度追踪</div>
+                    </div>
+                    <div class="mobile-nav-item" onclick="navigateToMobile('plans')">
+                        <div class="nav-icon">📋</div>
+                        <div class="nav-text">健身计划</div>
+                    </div>
+                    <div class="mobile-nav-item" onclick="navigateToMobile('workouts')">
+                        <div class="nav-icon">💪</div>
+                        <div class="nav-text">训练数据库</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 移动端遮罩层 -->
+        <div class="mobile-overlay" id="mobileOverlay" onclick="hideMobileMenu()" style="display: none;"></div>
+    </div>
+
+    <!-- 测试内容 -->
+    <div class="test-content">
+        <div class="test-section">
+            <div class="test-title">
+                移动端导航折叠功能测试
+                <span class="status-indicator status-desktop" id="desktopStatus">桌面端</span>
+                <span class="status-indicator status-mobile" id="mobileStatus" style="display: none;">移动端</span>
+            </div>
+            <div class="test-description">
+                <p><strong>测试说明：</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>在桌面端（宽度 > 768px）：显示水平导航栏</li>
+                    <li>在移动端（宽度 ≤ 768px）：显示折叠导航，点击汉堡菜单展开</li>
+                    <li>调整浏览器窗口大小来测试响应式效果</li>
+                    <li>在移动端点击汉堡菜单（三横线）来展开/收起导航</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">功能特性</div>
+            <div class="test-description">
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>✅ 响应式设计：自动适配桌面端和移动端</li>
+                    <li>✅ 汉堡菜单：三横线图标，点击时有动画效果</li>
+                    <li>✅ 侧滑菜单：从右侧滑出的导航菜单</li>
+                    <li>✅ 遮罩层：点击遮罩可关闭菜单</li>
+                    <li>✅ 图标导航：每个菜单项都有对应的emoji图标</li>
+                    <li>✅ 活跃状态：当前页面高亮显示</li>
+                    <li>✅ 平滑动画：所有交互都有流畅的过渡效果</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let showMobileMenu = false;
+
+        function toggleMobileMenu() {
+            showMobileMenu = !showMobileMenu;
+            const menu = document.getElementById('mobileNavMenu');
+            const overlay = document.getElementById('mobileOverlay');
+            const hamburger = document.querySelector('.hamburger-menu');
+            
+            if (showMobileMenu) {
+                menu.classList.add('show');
+                overlay.style.display = 'block';
+                hamburger.classList.add('active');
+            } else {
+                menu.classList.remove('show');
+                overlay.style.display = 'none';
+                hamburger.classList.remove('active');
+            }
+        }
+
+        function hideMobileMenu() {
+            showMobileMenu = false;
+            const menu = document.getElementById('mobileNavMenu');
+            const overlay = document.getElementById('mobileOverlay');
+            const hamburger = document.querySelector('.hamburger-menu');
+            
+            menu.classList.remove('show');
+            overlay.style.display = 'none';
+            hamburger.classList.remove('active');
+        }
+
+        function navigateToMobile(page) {
+            // 先隐藏菜单
+            hideMobileMenu();
+            
+            // 更新活跃状态
+            document.querySelectorAll('.mobile-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 模拟页面跳转
+            setTimeout(() => {
+                alert(`导航到: ${page}`);
+            }, 200);
+        }
+
+        // 监听窗口大小变化
+        function updateStatus() {
+            const isMobile = window.innerWidth <= 768;
+            const desktopStatus = document.getElementById('desktopStatus');
+            const mobileStatus = document.getElementById('mobileStatus');
+            
+            if (isMobile) {
+                desktopStatus.style.display = 'none';
+                mobileStatus.style.display = 'inline-block';
+                // 如果切换到移动端，确保菜单是关闭的
+                hideMobileMenu();
+            } else {
+                desktopStatus.style.display = 'inline-block';
+                mobileStatus.style.display = 'none';
+                // 如果切换到桌面端，确保移动端菜单是关闭的
+                hideMobileMenu();
+            }
+        }
+
+        // 初始化和监听窗口变化
+        window.addEventListener('resize', updateStatus);
+        updateStatus();
+    </script>
+</body>
+</html>
