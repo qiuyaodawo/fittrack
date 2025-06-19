@@ -376,10 +376,11 @@ export default {
 			// 检查今日是否已经完成过计划
 			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
 			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
-			const todayFormatted = this.formatDate(today);
-			
-			const alreadyCompleted = workoutHistory.some(workout => 
-				workout.date === todayFormatted && workout.source === 'dailyPlan'
+			// 使用完整日期格式进行检查，与保存时的格式保持一致
+			const todayFullDate = todayDateStr;
+
+			const alreadyCompleted = workoutHistory.some(workout =>
+				workout.date === todayFullDate && workout.source === 'dailyPlan'
 			);
 			
 			if (alreadyCompleted) {
@@ -390,7 +391,7 @@ export default {
 					cancelText: '取消',
 					success: (res) => {
 						if (res.confirm) {
-							this.saveCompletedPlan(todayPlan, todayFormatted, todayDayName);
+							this.saveCompletedPlan(todayPlan, todayFullDate, todayDayName);
 						}
 					}
 				});
@@ -406,14 +407,14 @@ export default {
 				cancelText: '取消',
 				success: (res) => {
 					if (res.confirm) {
-						this.saveCompletedPlan(todayPlan, todayFormatted, todayDayName);
+						this.saveCompletedPlan(todayPlan, todayFullDate, todayDayName);
 					}
 				}
 			});
 		},
 		
 		// 保存完成的计划到训练记录
-		saveCompletedPlan(todayPlan, dateFormatted, dayName) {
+		async saveCompletedPlan(todayPlan, dateFormatted, dayName) {
 			const userInfo = uni.getStorageSync('userInfo');
 			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
 			let workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
@@ -454,11 +455,22 @@ export default {
 			// 添加到训练记录
 			workoutHistory.unshift(workoutRecord);
 			uni.setStorageSync(workoutHistoryKey, workoutHistory);
-			
+
+			// 如果用户已登录，立即同步到服务器以防数据丢失
+			if (localDataService.isLoggedIn) {
+				try {
+					await localDataService.syncWorkoutToServer(workoutRecord);
+					console.log('完成计划记录已同步到服务器');
+				} catch (error) {
+					console.error('同步完成计划记录失败:', error);
+					// 同步失败不影响本地保存
+				}
+			}
+
 			// 重新加载训练信息
 			this.loadTrainingInfo();
 			this.loadWeeklyPlans();
-			
+
 			uni.showToast({
 				title: '计划完成！已记录',
 				icon: 'success',
@@ -541,9 +553,9 @@ export default {
 			const userInfo = uni.getStorageSync('userInfo');
 			const workoutHistoryKey = userInfo && userInfo.id ? `workoutHistory_${userInfo.id}` : 'workoutHistory';
 			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
-			
+
 			console.log('加载训练记录:', workoutHistory);
-			
+
 			if (workoutHistory.length === 0) {
 				this.trainingInfo = {
 					thisWeek: '0 次训练',
@@ -551,15 +563,27 @@ export default {
 				};
 				return;
 			}
-			
-			// 计算本月训练次数
+
+			// 计算本周训练次数
 			const now = new Date();
-			const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-			const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			
-			let thisMonthCount = 0;
-			let lastMonthCount = 0;
-			
+
+			// 计算本周的开始日期（周一）
+			const currentDay = now.getDay();
+			const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+			const thisWeekStart = new Date(now.getTime() + mondayOffset * 24 * 60 * 60 * 1000);
+			thisWeekStart.setHours(0, 0, 0, 0);
+
+			// 计算本周的结束日期（周日）
+			const thisWeekEnd = new Date(thisWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+			thisWeekEnd.setHours(23, 59, 59, 999);
+
+			// 计算上周的开始和结束日期
+			const lastWeekStart = new Date(thisWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+			const lastWeekEnd = new Date(thisWeekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+			let thisWeekCount = 0;
+			let lastWeekCount = 0;
+
 			workoutHistory.forEach(workout => {
 				// 处理不同的日期格式
 				let workoutDate;
@@ -582,24 +606,36 @@ export default {
 					console.warn('训练记录缺少日期信息:', workout);
 					return; // 跳过无效记录
 				}
-				
+
 				// 检查日期是否有效
 				if (isNaN(workoutDate.getTime())) {
 					console.warn('无效的训练记录日期:', workout);
 					return;
 				}
-				
-				if (workoutDate >= thisMonthStart) {
-					thisMonthCount++;
-				} else if (workoutDate >= lastMonthStart && workoutDate < thisMonthStart) {
-					lastMonthCount++;
+
+				// 判断是否在本周范围内
+				if (workoutDate >= thisWeekStart && workoutDate <= thisWeekEnd) {
+					thisWeekCount++;
+				} else if (workoutDate >= lastWeekStart && workoutDate <= lastWeekEnd) {
+					lastWeekCount++;
 				}
 			});
-			
-			this.trainingInfo.thisWeek = thisMonthCount + ' 次训练';
-			
-			// 计算进度变化
-			this.trainingInfo.weeklyProgress = '';
+
+			this.trainingInfo.thisWeek = thisWeekCount + ' 次训练';
+
+			// 计算进度变化（相比上周）
+			if (lastWeekCount > 0) {
+				const change = thisWeekCount - lastWeekCount;
+				if (change > 0) {
+					this.trainingInfo.weeklyProgress = `比上周多${change}次`;
+				} else if (change < 0) {
+					this.trainingInfo.weeklyProgress = `比上周少${Math.abs(change)}次`;
+				} else {
+					this.trainingInfo.weeklyProgress = '与上周持平';
+				}
+			} else {
+				this.trainingInfo.weeklyProgress = '';
+			}
 		},
 		loadTodayTraining() {
 			// 获取今日日期

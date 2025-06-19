@@ -1327,16 +1327,14 @@ export default {
 			};
 		},
 		
-		// 新增：检查登录状态并同步数据
+		// 修复：检查登录状态并同步数据 - 使用安全的同步策略
 		async checkLoginAndSync() {
 			if (localDataService.isLoggedIn) {
 				try {
 					console.log('进度页面：开始同步数据...');
-					// 先推送本地数据到服务器（包括体重数据）
-					await this.pushLocalDataToServer();
 
-					// 然后从服务器获取最新数据
-					await localDataService.pullAllDataFromServer();
+					// 使用安全的双向同步，避免覆盖最新的本地数据
+					await localDataService.autoSync();
 
 					// 同步完成后重新加载页面数据
 					setTimeout(() => {
@@ -1352,10 +1350,14 @@ export default {
 			}
 		},
 
-		// 新增：推送本地数据到服务器
+		// 修复：推送本地数据到服务器 - 包含训练记录
 		async pushLocalDataToServer() {
 			try {
 				console.log('推送本地数据到服务器...');
+
+				// 同步训练记录数据（重要：这是之前缺失的）
+				await localDataService.syncWorkoutHistory();
+				console.log('训练记录推送完成');
 
 				// 同步体重数据
 				const weightHistoryKey = this.getUserStorageKey('weightHistory');
@@ -1370,6 +1372,9 @@ export default {
 
 				// 同步个人记录数据
 				await localDataService.syncPersonalRecords();
+
+				// 同步健身计划数据
+				await localDataService.syncPlans();
 
 				console.log('本地数据推送完成');
 			} catch (error) {
