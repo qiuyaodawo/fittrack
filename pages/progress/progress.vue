@@ -1572,6 +1572,10 @@ export default {
 				// 同步健身计划数据
 				await localDataService.syncPlans();
 
+				// 同步每日计划数据（本周训练计划）
+				await localDataService.syncDailyPlans();
+				console.log('每日计划推送完成');
+
 				console.log('本地数据推送完成');
 			} catch (error) {
 				console.error('推送本地数据失败:', error);

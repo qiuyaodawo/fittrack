@@ -1074,6 +1074,8 @@ export default {
 						this.loadRecentWorkouts();
 						this.loadPersonalRecords();
 						this.loadBodyWeight();
+						// 重新加载本周训练计划
+						this.loadWeeklyPlans();
 					}, 1000);
 
 					console.log('数据同步完成');

@@ -332,7 +332,7 @@ app.post('/api/data/sync-plans', authenticateToken, (req, res) => {
     const dataContent = JSON.stringify(plans);
 
     db.run(
-        `INSERT OR REPLACE INTO user_data (id, user_id, data_type, data_content, updated_at) 
+        `INSERT OR REPLACE INTO user_data (id, user_id, data_type, data_content, updated_at)
          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [`${userId}_plans`, userId, 'plans', dataContent],
         function(err) {
@@ -346,6 +346,34 @@ app.post('/api/data/sync-plans', authenticateToken, (req, res) => {
             res.json({
                 success: true,
                 message: '健身计划同步成功'
+            });
+        }
+    );
+});
+
+// 同步每日计划（本周训练计划）
+app.post('/api/data/sync-daily-plans', authenticateToken, (req, res) => {
+    const { dailyPlans } = req.body;
+    const userId = req.user.userId;
+
+    const dataContent = JSON.stringify(dailyPlans);
+
+    db.run(
+        `INSERT OR REPLACE INTO user_data (id, user_id, data_type, data_content, updated_at)
+         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [`${userId}_daily_plans`, userId, 'daily_plans', dataContent],
+        function(err) {
+            if (err) {
+                console.error('同步每日计划失败:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: '同步每日计划失败'
+                });
+            }
+
+            res.json({
+                success: true,
+                message: '每日计划同步成功'
             });
         }
     );
@@ -370,6 +398,31 @@ app.get('/api/data/plans', authenticateToken, (req, res) => {
             res.json({
                 success: true,
                 data: plans
+            });
+        }
+    );
+});
+
+// 获取每日计划
+app.get('/api/data/daily-plans', authenticateToken, (req, res) => {
+    const userId = req.user.userId;
+
+    db.get(
+        'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ?',
+        [userId, 'daily_plans'],
+        (err, row) => {
+            if (err) {
+                console.error('获取每日计划失败:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: '获取每日计划失败'
+                });
+            }
+
+            const dailyPlans = row ? JSON.parse(row.data_content) : [];
+            res.json({
+                success: true,
+                data: dailyPlans
             });
         }
     );
@@ -435,6 +488,7 @@ app.get('/api/data/all', authenticateToken, (req, res) => {
         [userId],
         (err, rows) => {
             if (err) {
+                console.error('获取所有数据失败:', err);
                 return res.status(500).json({
                     success: false,
                     message: '获取数据失败'
@@ -443,9 +497,23 @@ app.get('/api/data/all', authenticateToken, (req, res) => {
 
             const allData = {};
             rows.forEach(row => {
-                allData[row.data_type] = JSON.parse(row.data_content);
+                try {
+                    allData[row.data_type] = JSON.parse(row.data_content);
+                } catch (parseErr) {
+                    console.error(`解析数据失败 (${row.data_type}):`, parseErr);
+                    allData[row.data_type] = [];
+                }
             });
 
+            // 确保所有必要的数据类型都存在
+            const requiredTypes = ['workout_history', 'personal_records', 'plans', 'body_weight', 'daily_plans'];
+            requiredTypes.forEach(type => {
+                if (!allData[type]) {
+                    allData[type] = [];
+                }
+            });
+
+            console.log('返回数据类型:', Object.keys(allData));
             res.json({
                 success: true,
                 data: allData

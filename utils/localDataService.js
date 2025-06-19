@@ -269,12 +269,12 @@ class LocalDataService {
 		try {
 			const storageKey = this.getUserStorageKey('myPlans');
 			const plans = uni.getStorageSync(storageKey) || [];
-			
+
 			const result = await this.request('/data/sync-plans', {
 				method: 'POST',
 				data: { plans }
 			});
-			
+
 			return {
 				success: result.success,
 				message: result.message
@@ -284,25 +284,70 @@ class LocalDataService {
 			return { success: false, message: error.message };
 		}
 	}
+
+	// 新增：同步每日计划（本周训练计划）
+	async syncDailyPlans() {
+		if (!this.isLoggedIn) return { success: false, message: '用户未登录' };
+
+		try {
+			const storageKey = this.getUserStorageKey('dailyPlans');
+			const dailyPlans = uni.getStorageSync(storageKey) || [];
+
+			const result = await this.request('/data/sync-daily-plans', {
+				method: 'POST',
+				data: { dailyPlans }
+			});
+
+			return {
+				success: result.success,
+				message: result.message
+			};
+		} catch (error) {
+			console.error('每日计划同步失败:', error);
+			return { success: false, message: error.message };
+		}
+	}
 	
 	// 获取健身计划 - 修复存储键问题
 	async getPlans() {
 		if (!this.isLoggedIn) return { success: false, message: '用户未登录' };
-		
+
 		try {
 			const result = await this.request('/data/plans');
-			
+
 			if (result.success) {
 				const storageKey = this.getUserStorageKey('myPlans');
 				uni.setStorageSync(storageKey, result.data);
 			}
-			
+
 			return {
 				success: result.success,
 				data: result.data
 			};
 		} catch (error) {
 			console.error('获取健身计划失败:', error);
+			return { success: false, message: error.message };
+		}
+	}
+
+	// 新增：获取每日计划
+	async getDailyPlans() {
+		if (!this.isLoggedIn) return { success: false, message: '用户未登录' };
+
+		try {
+			const result = await this.request('/data/daily-plans');
+
+			if (result.success) {
+				const storageKey = this.getUserStorageKey('dailyPlans');
+				uni.setStorageSync(storageKey, result.data);
+			}
+
+			return {
+				success: result.success,
+				data: result.data
+			};
+		} catch (error) {
+			console.error('获取每日计划失败:', error);
 			return { success: false, message: error.message };
 		}
 	}
@@ -358,11 +403,11 @@ class LocalDataService {
 		
 		try {
 			const result = await this.request('/data/all');
-			
+
 			if (result.success) {
 				// 将云端数据同步到本地，使用正确的用户隔离存储键
-				const { workout_history, personal_records, plans, body_weight } = result.data;
-				
+				const { workout_history, personal_records, plans, body_weight, daily_plans } = result.data;
+
 				if (workout_history) {
 					const storageKey = this.getUserStorageKey('workoutHistory');
 					uni.setStorageSync(storageKey, workout_history);
@@ -378,6 +423,10 @@ class LocalDataService {
 				if (body_weight) {
 					const storageKey = this.getUserStorageKey('bodyWeight');
 					uni.setStorageSync(storageKey, body_weight);
+				}
+				if (daily_plans) {
+					const storageKey = this.getUserStorageKey('dailyPlans');
+					uni.setStorageSync(storageKey, daily_plans);
 				}
 			}
 			
@@ -397,23 +446,27 @@ class LocalDataService {
 		
 		try {
 			console.log('开始推送本地数据到服务器...');
-			
+
 			// 推送训练记录
 			await this.syncWorkoutHistory();
 			console.log('训练记录推送完成');
-			
+
 			// 推送个人记录
 			await this.syncPersonalRecords();
 			console.log('个人记录推送完成');
-			
+
 			// 推送健身计划
 			await this.syncPlans();
 			console.log('健身计划推送完成');
-			
+
+			// 推送每日计划（本周训练计划）
+			await this.syncDailyPlans();
+			console.log('每日计划推送完成');
+
 			// 推送体重数据
 			await this.syncBodyWeight();
 			console.log('体重数据推送完成');
-			
+
 			return {
 				success: true,
 				message: '所有数据推送成功'
