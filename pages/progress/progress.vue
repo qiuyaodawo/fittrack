@@ -417,7 +417,7 @@ export default {
 					id: 30,
 					name: '锤式弯举',
 					description: '中性握法的弯举动作，同时锻炼二头肌和肱桡肌',
-					tags: ['手臂', '哑铃'],
+				 tags: ['手臂', '哑铃'],
 					category: 'arms'
 				},
 				{
@@ -461,7 +461,7 @@ export default {
 					id: 36,
 					name: '俄罗斯转体',
 					description: '锻炼腹斜肌和核心旋转力量的动作',
-					tags: ['核心', '自重'],
+				 tags: ['核心', '自重'],
 					category: 'core'
 				},
 				{
@@ -712,7 +712,10 @@ export default {
 			// 更新体重变化信息显示
 			this.loadWeightChangeInfo();
 			
-
+			// 如果已登录，立即同步体重数据到服务器
+			if (localDataService.isLoggedIn) {
+				this.syncWeightDataToServer();
+			}
 			
 			this.weightInput = '';
 		},
@@ -767,6 +770,11 @@ export default {
 			// 立即更新个人记录显示
 			this.updatePersonalRecordsWithManualData();
 			this.updateStrengthProgress();
+			
+			// 如果已登录，立即同步个人记录数据到服务器
+			if (localDataService.isLoggedIn) {
+				this.syncPersonalRecordsToServer();
+			}
 			
 			let message = `${standardExerciseName}记录成功`;
 			if (isNewRecord) {
@@ -1324,22 +1332,119 @@ export default {
 			if (localDataService.isLoggedIn) {
 				try {
 					console.log('进度页面：开始同步数据...');
-					// 先尝试从服务器获取最新数据
+					// 先推送本地数据到服务器（包括体重数据）
+					await this.pushLocalDataToServer();
+
+					// 然后从服务器获取最新数据
 					await localDataService.pullAllDataFromServer();
-					
+
 					// 同步完成后重新加载页面数据
 					setTimeout(() => {
 						this.loadPersonalRecords();
 						this.loadRecentWorkouts();
 						this.loadBodyWeightData();
 					}, 500);
-					
+
 					console.log('进度页面：数据同步完成');
 				} catch (error) {
 					console.error('进度页面：数据同步失败:', error);
 				}
 			}
 		},
+
+		// 新增：推送本地数据到服务器
+		async pushLocalDataToServer() {
+			try {
+				console.log('推送本地数据到服务器...');
+
+				// 同步体重数据
+				const weightHistoryKey = this.getUserStorageKey('weightHistory');
+				const bodyWeightKey = this.getUserStorageKey('bodyWeight');
+				const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
+
+				// 如果有体重数据，先同步到bodyWeight键下
+				if (weightHistory.length > 0) {
+					uni.setStorageSync(bodyWeightKey, weightHistory);
+					await localDataService.syncBodyWeight();
+				}
+
+				// 同步个人记录数据
+				await localDataService.syncPersonalRecords();
+
+				console.log('本地数据推送完成');
+			} catch (error) {
+				console.error('推送本地数据失败:', error);
+			}
+		},
+
+		// 新增：同步体重数据到服务器
+		async syncWeightDataToServer() {
+			try {
+				console.log('开始同步体重数据到服务器...');
+
+				// 先将weightHistory数据转换为bodyWeight格式并同步到localDataService的存储键
+				const weightHistoryKey = this.getUserStorageKey('weightHistory');
+				const bodyWeightKey = this.getUserStorageKey('bodyWeight');
+				const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
+
+				// 将weightHistory格式的数据保存到bodyWeight键下，以便localDataService能够读取
+				uni.setStorageSync(bodyWeightKey, weightHistory);
+
+				const result = await localDataService.syncBodyWeight();
+
+				if (result.success) {
+					console.log('体重数据同步成功');
+				} else {
+					console.error('体重数据同步失败:', result.message);
+				}
+			} catch (error) {
+				console.error('体重数据同步异常:', error);
+			}
+		},
+
+		// 新增：同步个人记录数据到服务器
+		async syncPersonalRecordsToServer() {
+			try {
+				console.log('开始同步个人记录数据到服务器...');
+				const result = await localDataService.syncPersonalRecords();
+				
+				if (result.success) {
+					console.log('个人记录数据同步成功');
+				} else {
+					console.error('个人记录数据同步失败:', result.message);
+				}
+			} catch (error) {
+				console.error('个人记录数据同步异常:', error);
+			}
+		},
+
+		// 新增：用于加载个人记录的方法（兼容性）
+		loadPersonalRecords() {
+			this.updatePersonalRecordsWithManualData();
+		},
+
+		// 新增：用于加载最近训练的方法（兼容性）
+		loadRecentWorkouts() {
+			this.loadWeeklyBodyParts();
+		},
+
+		// 新增：用于加载体重数据的方法（兼容性）
+		loadBodyWeightData() {
+			// 同步bodyWeight数据到weightHistory，确保数据一致性
+			const bodyWeightKey = this.getUserStorageKey('bodyWeight');
+			const weightHistoryKey = this.getUserStorageKey('weightHistory');
+			const bodyWeight = uni.getStorageSync(bodyWeightKey) || [];
+			const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
+
+			// 如果bodyWeight有数据而weightHistory没有，或者bodyWeight数据更新，则同步
+			if (bodyWeight.length > 0 && (weightHistory.length === 0 ||
+				JSON.stringify(bodyWeight) !== JSON.stringify(weightHistory))) {
+				console.log('同步bodyWeight数据到weightHistory');
+				uni.setStorageSync(weightHistoryKey, bodyWeight);
+			}
+
+			this.loadWeightChangeInfo();
+		}
 	}
 }
 </script>

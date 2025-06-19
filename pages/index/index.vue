@@ -1029,7 +1029,7 @@ export default {
 					console.log('用户已登录，开始同步数据...');
 					// 执行后台数据同步
 					await localDataService.autoSync();
-					
+
 					// 同步完成后重新加载页面数据
 					setTimeout(() => {
 						this.loadQuickStats();
@@ -1037,12 +1037,32 @@ export default {
 						this.loadPersonalRecords();
 						this.loadBodyWeight();
 					}, 1000);
-					
+
 					console.log('数据同步完成');
 				} catch (error) {
 					console.error('数据同步失败:', error);
 				}
 			}
+		},
+
+		// 新增：加载体重数据方法
+		loadBodyWeight() {
+			// 同步bodyWeight数据到weightHistory，确保数据一致性
+			const userInfo = uni.getStorageSync('userInfo');
+			const bodyWeightKey = userInfo && userInfo.id ? `bodyWeight_${userInfo.id}` : 'bodyWeight';
+			const weightHistoryKey = userInfo && userInfo.id ? `weightHistory_${userInfo.id}` : 'weightHistory';
+			const bodyWeight = uni.getStorageSync(bodyWeightKey) || [];
+			const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
+
+			// 如果bodyWeight有数据而weightHistory没有，或者bodyWeight数据更新，则同步
+			if (bodyWeight.length > 0 && (weightHistory.length === 0 ||
+				JSON.stringify(bodyWeight) !== JSON.stringify(weightHistory))) {
+				console.log('同步bodyWeight数据到weightHistory');
+				uni.setStorageSync(weightHistoryKey, bodyWeight);
+			}
+
+			// 重新加载体重信息显示
+			this.loadWeightInfo();
 		},
 	}
 }
