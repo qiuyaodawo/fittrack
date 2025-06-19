@@ -306,29 +306,29 @@
 
 				<view class="modal-body">
 					<!-- 计划基本信息 -->
-					<view class="form-group">
-						<text class="form-label">计划名称</text>
-						<input v-model="customPlan.title" placeholder="请输入计划名称" class="form-input" />
+					<view class="form-section">
+						<text class="section-label">计划名称</text>
+						<input v-model="customPlan.title" placeholder="请输入计划名称" class="modern-input" />
 					</view>
 
 					<!-- 周数控制 -->
-					<view class="form-group">
-						<text class="form-label">训练周期</text>
-						<view class="week-control">
-							<view class="week-selector">
-								<button class="week-btn decrease" @tap="changeWeeks(-1)"
-									:disabled="customPlan.weeks <= 1">
-									<text class="btn-icon">−</text>
-								</button>
-								<input type="number" class="week-input" v-model="weeksInputValue"
-									@input="handleWeeksInput" @blur="validateWeeksInput" placeholder="周数" min="1"
+					<view class="form-section">
+						<text class="section-label">训练周期</text>
+						<view class="week-control-modern">
+							<button class="control-btn decrease" @tap="changeWeeks(-1)"
+								:disabled="customPlan.weeks <= 1">
+								<text class="control-icon">−</text>
+							</button>
+							<view class="week-display">
+								<input type="number" class="week-input-modern" v-model="weeksInputValue"
+									@input="handleWeeksInput" @blur="validateWeeksInput" placeholder="1" min="1"
 									max="99" />
-								<text class="week-unit">周</text>
-								<button class="week-btn increase" @tap="changeWeeks(1)"
-									:disabled="customPlan.weeks >= 99">
-									<text class="btn-icon">+</text>
-								</button>
+								<text class="week-unit-modern">周</text>
 							</view>
+							<button class="control-btn increase" @tap="changeWeeks(1)"
+								:disabled="customPlan.weeks >= 99">
+								<text class="control-icon">+</text>
+							</button>
 						</view>
 					</view>
 
@@ -346,33 +346,31 @@
 					</view>
 
 					<!-- 一周七天的训练安排 -->
-					<view class="form-group">
-						<text class="form-label">训练安排 (第{{ customPlan.currentWeek }}周)</text>
-						<view class="days-grid">
-							<view class="day-card" v-for="(day, index) in weekDays" :key="index"
+					<view class="form-section">
+						<text class="section-label">训练安排 (第{{ customPlan.currentWeek }}周)</text>
+						<view class="days-grid-modern">
+							<view class="day-card-modern" v-for="(day, index) in weekDays" :key="index"
 								@tap="editDay(day, customPlan.currentWeek)"
 								:class="{ 'has-plan': getDayPlan(customPlan.currentWeek, day), 'rest-day': getDayPlan(customPlan.currentWeek, day) && getDayPlan(customPlan.currentWeek, day).restDay }">
 
-								<text class="day-name">{{ day }}</text>
-								<view class="day-status" v-if="getDayPlan(customPlan.currentWeek, day)">
-									<text class="status-text">
+								<text class="day-name-modern">{{ day }}</text>
+								<view class="day-status-modern" v-if="getDayPlan(customPlan.currentWeek, day)">
+									<text class="status-text-modern">
 										{{ getDayPlan(customPlan.currentWeek, day).restDay ? '休息' :
 											getDayPlan(customPlan.currentWeek, day).exercises.length + '个动作' }}
 									</text>
 								</view>
-								<view class="day-status empty" v-else>
-									<text class="status-text">未设置</text>
+								<view class="day-status-modern empty" v-else>
+									<text class="status-text-modern">未设置</text>
 								</view>
-
-								<!-- 不显示具体动作名称，只在状态中显示动作数量 -->
 							</view>
 						</view>
 					</view>
 				</view>
 
-				<view class="modal-footer">
-					<button class="btn btn-outline" @tap="closeModal">取消</button>
-					<button class="btn btn-primary" @tap="saveCustomPlan" :disabled="!customPlan.title">保存计划</button>
+				<view class="modal-footer-modern">
+					<button class="modern-btn outline" @tap="closeModal">取消</button>
+					<button class="modern-btn primary" @tap="saveCustomPlan" :disabled="!customPlan.title">保存计划</button>
 				</view>
 			</view>
 		</view>
@@ -454,25 +452,28 @@
 		<view class="modal" v-if="showExerciseSelector" @tap.self="closeExerciseSelector">
 			<view class="modal-content exercise-selector-modal">
 				<view class="modal-header">
-					<text class="modal-title">{{ selectedExercise !== null ? '编辑动作' : '添加动作' }}</text>
+					<text class="modal-title">添加动作</text>
 					<view class="close-btn" @tap="closeExerciseSelector">×</view>
 				</view>
 
 				<view class="modal-body">
-					<!-- 动作选择 -->
-					<view class="form-group">
-						<text class="form-label">动作名称</text>
-						<input v-model="exerciseDetails.name" placeholder="请输入任意动作名称（可自定义）" class="form-input" />
-						<text class="form-hint">💡 您可以输入任何动作名称，不限于下方的选项</text>
+					<!-- 动作名称输入 -->
+					<view class="form-section">
+						<text class="section-label">动作名称</text>
+						<input v-model="exerciseDetails.name" placeholder="请输入任意动作名称（可自定义）" class="modern-input" />
+						<text class="form-hint-modern">💡 您可以输入任何动作名称，不限于下方的选项</text>
 					</view>
 
-					<view class="form-group">
-						<text class="form-label">快速选择常用动作（可选）</text>
-						<view class="exercise-categories">
-							<view class="category" v-for="(exercises, category) in exerciseLibrary" :key="category">
-								<text class="category-name">{{ category }}</text>
-								<view class="exercise-options">
-									<view class="exercise-option" v-for="exercise in exercises" :key="exercise"
+					<!-- 快速选择动作 -->
+					<view class="form-section">
+						<text class="section-label">快速选择常用动作（可选）</text>
+						<view class="exercise-categories-modern">
+							<view class="category-modern" v-for="(exercises, category) in exerciseLibrary" :key="category">
+								<view class="category-header-modern">
+									<text class="category-name-modern">{{ category }}</text>
+								</view>
+								<view class="exercise-options-modern">
+									<view class="exercise-option-modern" v-for="exercise in exercises" :key="exercise"
 										:class="{ 'selected': exerciseDetails.name === exercise }"
 										@tap="selectExerciseName(exercise)">
 										{{ exercise }}
@@ -516,10 +517,10 @@
 					</view>
 				</view>
 
-				<view class="modal-footer">
-					<button class="btn btn-outline" @tap="closeExerciseSelector">取消</button>
-					<button class="btn btn-primary" @tap="saveExercise" :disabled="!exerciseDetails.name">
-						{{ selectedExercise !== null ? '更新' : '添加' }}
+				<view class="modal-footer-modern">
+					<button class="modern-btn outline" @tap="closeExerciseSelector">取消</button>
+					<button class="modern-btn primary" @tap="saveExercise" :disabled="!exerciseDetails.name">
+						添加
 					</button>
 				</view>
 			</view>
@@ -2574,19 +2575,20 @@ page {
 }
 
 .modal-content {
-	width: 90%;
-	max-width: 800rpx;
-	max-height: 90vh;
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
 	background-color: #fff;
-	border-radius: 12rpx;
+	border-radius: 20rpx;
 	overflow: hidden;
-	box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
 	display: flex;
 	flex-direction: column;
 }
 
 .modal-header {
-	padding: 30rpx;
+	padding: 44rpx 44rpx;
 	border-bottom: 2rpx solid var(--border-color);
 	display: flex;
 	justify-content: space-between;
@@ -2604,8 +2606,8 @@ page {
 	font-size: 40rpx;
 	color: var(--text-color-light);
 	cursor: pointer;
-	width: 60rpx;
-	height: 60rpx;
+	width: 68rpx;
+	height: 68rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -2613,8 +2615,8 @@ page {
 
 /* 美化的关闭按钮 */
 .close-btn {
-	width: 60rpx;
-	height: 60rpx;
+	width: 68rpx;
+	height: 68rpx;
 	border-radius: 50%;
 	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
 	color: #fff;
@@ -2653,23 +2655,28 @@ page {
 }
 
 .modal-body {
-	padding: 30rpx;
+	padding: 44rpx;
 	overflow-y: auto;
 	flex: 1;
 	background-color: #fff;
 }
 
 .modal-footer {
-	padding: 20rpx 30rpx;
+	padding: 40rpx 44rpx;
 	border-top: 2rpx solid var(--border-color);
 	display: flex;
 	justify-content: flex-end;
+	gap: 28rpx;
 	flex-shrink: 0;
 	background-color: #fff;
 }
 
 .modal-footer .btn {
-	margin-left: 20rpx;
+	min-width: 180rpx;
+	max-width: 240rpx;
+	flex: 0 0 auto;
+	height: 100rpx;
+	line-height: 98rpx;
 }
 
 .btn-secondary {
@@ -2711,11 +2718,11 @@ page {
 
 .modal-body .input {
 	width: 100%;
-	height: 80rpx;
-	line-height: 80rpx;
-	padding: 0 20rpx;
+	height: 108rpx;
+	line-height: 106rpx;
+	padding: 0 28rpx;
 	border: 2rpx solid var(--border-color);
-	border-radius: 8rpx;
+	border-radius: 12rpx;
 	background-color: #fff;
 	box-sizing: border-box;
 }
@@ -2797,125 +2804,630 @@ page {
 	margin-top: 15rpx;
 }
 
-/* 自定义计划样式 */
+/* 现代化弹窗样式 - 优化布局比例 */
 .create-plan-modal {
-	width: 90%;
-	max-width: 900rpx;
-	height: 80vh;
-	min-height: 600rpx;
-	overflow-y: auto;
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
+	border-radius: 24rpx;
+	overflow: hidden;
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
 }
 
-.week-control {
-	margin-top: 20rpx;
+.exercise-selector-modal {
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
+	border-radius: 24rpx;
+	overflow: hidden;
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
 }
 
-.week-selector {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 15rpx;
-	background: #f8f9fa;
-	padding: 15rpx;
+.day-editor-modal {
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
+	border-radius: 24rpx;
+	overflow: hidden;
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
+}
+
+/* 现代化表单区域 */
+.form-section {
+	margin-bottom: 48rpx;
+}
+
+.section-label {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 24rpx;
+	display: block;
+}
+
+.modern-input {
+	width: 100%;
+	height: 108rpx;
+	padding: 0 28rpx;
+	font-size: 30rpx;
+	color: #1f2937;
+	background: #f9fafb;
+	border: 2rpx solid #e5e7eb;
 	border-radius: 16rpx;
-	border: 2rpx solid #e9ecef;
+	box-sizing: border-box;
+	transition: all 0.3s ease;
+	line-height: 1.4;
 }
 
-.week-btn {
-	width: 72rpx;
-	height: 72rpx;
-	border-radius: 50%;
-	border: none;
-	font-size: 32rpx;
-	font-weight: 600;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: all 0.3s;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
-}
-
-.week-btn.decrease {
-	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-	color: white;
-}
-
-.week-btn.increase {
-	background: linear-gradient(135deg, #51cf66, #40c057);
-	color: white;
-}
-
-.week-btn:hover {
-	transform: scale(1.05);
-	box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.15);
-}
-
-.week-btn:disabled {
-	background: #e9ecef !important;
-	color: #adb5bd !important;
-	transform: none !important;
-	box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05) !important;
-	cursor: not-allowed;
-}
-
-.btn-icon {
-	font-size: 28rpx;
-	font-weight: bold;
-}
-
-.week-input {
-	width: 120rpx;
-	height: 72rpx;
-	text-align: center;
-	font-size: 32rpx;
-	font-weight: 600;
-	color: #333;
-	background: white;
-	border: 2rpx solid #dee2e6;
-	border-radius: 12rpx;
-	box-shadow: inset 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
-	transition: all 0.3s;
-}
-
-.week-input:focus {
-	border-color: var(--primary-color);
-	box-shadow: 0 0 0 4rpx rgba(59, 130, 246, 0.1);
+.modern-input:focus {
+	background: #ffffff;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 6rpx rgba(59, 130, 246, 0.1);
 	outline: none;
 }
 
-.week-unit {
-	font-size: 28rpx;
-	font-weight: 500;
-	color: #666;
-	min-width: 40rpx;
+.form-hint-modern {
+	font-size: 24rpx;
+	color: #f59e0b;
+	margin-top: 12rpx;
+	display: block;
+	line-height: 1.4;
 }
 
-/* 移动端优化 */
+/* 现代化周数控制 */
+.week-control-modern {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	padding: 16rpx 24rpx;
+	background: #ffffff;
+	border-radius: 20rpx;
+	border: 2rpx solid #e5e7eb;
+	max-width: 400rpx;
+	margin: 0 auto;
+}
+
+.control-btn {
+	width: 80rpx;
+	height: 80rpx;
+	border-radius: 50%;
+	border: none;
+	font-size: 34rpx;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s ease;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+}
+
+.control-btn.decrease {
+	background: linear-gradient(135deg, #ef4444, #dc2626);
+	color: white;
+}
+
+.control-btn.increase {
+	background: linear-gradient(135deg, #22c55e, #16a34a);
+	color: white;
+}
+
+.control-btn:active {
+	transform: scale(0.95);
+}
+
+.control-btn:disabled {
+	background: #f3f4f6 !important;
+	color: #9ca3af !important;
+	transform: none !important;
+	box-shadow: none !important;
+}
+
+.week-display {
+	display: flex;
+	align-items: center;
+	gap: 8rpx;
+}
+
+.week-input-modern {
+	width: 96rpx;
+	height: 80rpx;
+	text-align: center;
+	font-size: 34rpx;
+	font-weight: 700;
+	color: #1f2937;
+	background: #f9fafb;
+	border: 2rpx solid #e5e7eb;
+	border-radius: 16rpx;
+	box-sizing: border-box;
+}
+
+.week-unit-modern {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #6b7280;
+}
+
+/* 现代化天数网格 */
+.days-grid-modern {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 24rpx;
+	margin-top: 24rpx;
+}
+
+.day-card-modern {
+	background: #ffffff;
+	border: 2rpx solid #e5e7eb;
+	border-radius: 20rpx;
+	padding: 32rpx 28rpx;
+	text-align: center;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	min-height: 160rpx;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.day-card-modern:active {
+	transform: scale(0.98);
+}
+
+.day-card-modern.has-plan {
+	border-color: #3b82f6;
+	background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
+
+.day-card-modern.rest-day {
+	border-color: #f59e0b;
+	background: linear-gradient(135deg, #fef3c7, #fed7aa);
+}
+
+.day-name-modern {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 8rpx;
+}
+
+.day-status-modern {
+	margin-top: 8rpx;
+}
+
+.status-text-modern {
+	font-size: 24rpx;
+	color: #6b7280;
+}
+
+.day-card-modern.has-plan .status-text-modern {
+	color: #1e40af;
+	font-weight: 500;
+}
+
+.day-card-modern.rest-day .status-text-modern {
+	color: #d97706;
+	font-weight: 500;
+}
+
+.day-status-modern.empty .status-text-modern {
+	color: #9ca3af;
+	font-style: italic;
+}
+
+/* 现代化动作选择样式 */
+.exercise-categories-modern {
+	max-height: 60vh;
+	overflow-y: auto;
+	border-radius: 16rpx;
+	background: #f9fafb;
+	padding: 16rpx;
+}
+
+.category-modern {
+	margin-bottom: 32rpx;
+}
+
+.category-header-modern {
+	background: linear-gradient(135deg, #6366f1, #8b5cf6);
+	border-radius: 16rpx;
+	padding: 20rpx 24rpx;
+	margin-bottom: 16rpx;
+}
+
+.category-name-modern {
+	font-size: 32rpx;
+	font-weight: 700;
+	color: #ffffff;
+	text-align: center;
+}
+
+.exercise-options-modern {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12rpx;
+}
+
+.exercise-option-modern {
+	padding: 16rpx 20rpx;
+	background: #ffffff;
+	border: 2rpx solid #e5e7eb;
+	border-radius: 12rpx;
+	font-size: 26rpx;
+	color: #374151;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 120rpx;
+	text-align: center;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.exercise-option-modern:active {
+	transform: scale(0.98);
+}
+
+.exercise-option-modern.selected {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	color: #ffffff;
+	border-color: #1d4ed8;
+	box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.3);
+}
+
+/* 现代化按钮样式 */
+.modal-footer-modern {
+	padding: 32rpx 40rpx;
+	background: #f9fafb;
+	border-top: 2rpx solid #e5e7eb;
+	display: flex;
+	gap: 24rpx;
+	justify-content: flex-end;
+}
+
+.modern-btn {
+	padding: 28rpx 40rpx;
+	border-radius: 16rpx;
+	font-size: 30rpx;
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 180rpx;
+	min-height: 100rpx;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.modern-btn.outline {
+	background: #ffffff;
+	color: #6b7280;
+	border: 2rpx solid #d1d5db;
+}
+
+.modern-btn.outline:active {
+	background: #f3f4f6;
+	transform: scale(0.98);
+}
+
+.modern-btn.primary {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	color: #ffffff;
+	box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.3);
+}
+
+.modern-btn.primary:active {
+	transform: scale(0.98);
+	box-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.4);
+}
+
+.modern-btn.primary:disabled {
+	background: #d1d5db;
+	color: #9ca3af;
+	box-shadow: none;
+	cursor: not-allowed;
+}
+
+/* 响应式设计 */
 @media screen and (max-width: 768px) {
-	.week-selector {
-		gap: 10rpx;
-		padding: 12rpx;
+	.create-plan-modal,
+	.exercise-selector-modal {
+		width: 92%;
+		max-height: 92%;
+		height: 92%;
+		border-radius: 20rpx;
 	}
 
-	.week-btn {
+	.days-grid-modern {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 16rpx;
+	}
+
+	.day-card-modern {
+		padding: 24rpx 20rpx;
+		min-height: 120rpx;
+	}
+
+	.control-btn {
 		width: 64rpx;
 		height: 64rpx;
 		font-size: 28rpx;
 	}
 
-	.btn-icon {
-		font-size: 24rpx;
-	}
-
-	.week-input {
-		width: 100rpx;
+	.week-input-modern {
+		width: 80rpx;
 		height: 64rpx;
 		font-size: 28rpx;
 	}
 
-	.week-unit {
+	.week-control-modern {
+		gap: 8rpx;
+		padding: 12rpx 20rpx;
+		max-width: 320rpx;
+	}
+
+	.modal-footer-modern {
+		padding: 32rpx 36rpx;
+		gap: 24rpx;
+	}
+
+	.modern-btn {
+		padding: 20rpx 32rpx;
+		font-size: 28rpx;
+		min-width: 160rpx;
+		min-height: 88rpx;
+	}
+
+	.day-editor-modal,
+	.create-plan-modal,
+	.exercise-selector-modal {
+		width: 92%;
+		max-height: 92%;
+		height: 92%;
+		border-radius: 20rpx;
+	}
+
+	.btn-small {
+		height: 72rpx;
+		line-height: 70rpx;
+		font-size: 26rpx;
+		padding: 0 24rpx;
+		min-width: 140rpx;
+		max-width: 180rpx;
+	}
+
+	.modal-footer .btn {
+		min-width: 160rpx;
+		max-width: 200rpx;
+		height: 88rpx;
+		line-height: 86rpx;
+	}
+
+	.exercise-item {
+		padding: 20rpx;
+		min-height: 100rpx;
+	}
+
+	.action-btn {
+		padding: 8rpx 16rpx;
 		font-size: 24rpx;
 	}
+
+	.modern-input {
+		height: 96rpx;
+		font-size: 28rpx;
+		padding: 0 24rpx;
+	}
+
+	.modal-body {
+		padding: 36rpx;
+	}
+
+	.modal-header {
+		padding: 36rpx 36rpx;
+	}
+
+	.form-section {
+		margin-bottom: 40rpx;
+	}
+
+	.section-label {
+		margin-bottom: 20rpx;
+	}
+}
+
+/* 日程编辑器样式 */
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20rpx;
+}
+
+.section-title {
+	font-size: 30rpx;
+	font-weight: 600;
+	color: #1f2937;
+	flex: 1;
+}
+
+.btn-small {
+	height: 72rpx;
+	line-height: 72rpx;
+	font-size: 28rpx;
+	padding: 0 28rpx;
+	border-radius: 16rpx;
+	background-color: var(--primary-color);
+	color: #ffffff;
+	border: none;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	white-space: nowrap;
+	min-width: 140rpx;
+	max-width: 180rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.btn-small:active {
+	transform: scale(0.98);
+	background-color: #1d4ed8;
+}
+
+/* 训练动作区域样式 */
+.exercises-section {
+	margin-bottom: 40rpx;
+}
+
+.exercise-list {
+	display: flex;
+	flex-direction: column;
+	gap: 20rpx;
+}
+
+.exercise-item {
+	background: #f8fafc;
+	border-radius: 16rpx;
+	padding: 24rpx;
+	border: 2rpx solid #e2e8f0;
+	transition: all 0.3s ease;
+	min-height: 120rpx;
+}
+
+.exercise-card {
+	width: 100%;
+}
+
+.exercise-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+
+.exercise-name {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #1f2937;
+	flex: 1;
+}
+
+.exercise-actions {
+	display: flex;
+	gap: 12rpx;
+}
+
+.action-btn {
+	padding: 8rpx 16rpx;
+	border-radius: 8rpx;
+	font-size: 24rpx;
+	border: none;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.edit-btn {
+	background: #dbeafe;
+	color: #1e40af;
+}
+
+.delete-btn {
+	background: #fee2e2;
+	color: #dc2626;
+}
+
+.action-btn:active {
+	transform: scale(0.95);
+}
+
+.exercise-info {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	margin-bottom: 8rpx;
+}
+
+.info-text {
+	font-size: 24rpx;
+	color: #6b7280;
+	background: #ffffff;
+	padding: 6rpx 12rpx;
+	border-radius: 6rpx;
+	border: 1rpx solid #e5e7eb;
+}
+
+.exercise-notes {
+	margin-top: 8rpx;
+}
+
+.notes-text {
+	font-size: 24rpx;
+	color: #6b7280;
+	font-style: italic;
+	line-height: 1.4;
+}
+
+/* 空状态样式 */
+.empty-state {
+	text-align: center;
+	padding: 40rpx 20rpx;
+	color: #9ca3af;
+	font-size: 26rpx;
+}
+
+/* 训练备注区域 */
+.notes-section {
+	margin-top: 24rpx;
+}
+
+.notes-input {
+	width: 100%;
+	min-height: 140rpx;
+	padding: 20rpx 24rpx;
+	font-size: 28rpx;
+	color: #1f2937;
+	background: #f9fafb;
+	border: 2rpx solid #e5e7eb;
+	border-radius: 16rpx;
+	box-sizing: border-box;
+	resize: vertical;
+	transition: all 0.3s ease;
+	line-height: 1.6;
+}
+
+.notes-input:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 4rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+	background-color: #ffffff;
+}
+
+.notes-input::placeholder {
+	color: #9ca3af;
+	font-size: 24rpx;
+}
+
+/* 休息日选项样式 */
+.rest-day-option {
+	margin-bottom: 32rpx;
+	padding: 20rpx;
+	background: #f0f9ff;
+	border-radius: 12rpx;
+	border: 2rpx solid #bae6fd;
+}
+
+.checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 12rpx;
+	font-size: 28rpx;
+	color: #1f2937;
+	font-weight: 500;
 }
 
 .week-selection-container {

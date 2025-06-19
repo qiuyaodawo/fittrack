@@ -154,27 +154,29 @@
 		<view class="modal" v-if="showExerciseSelector" @tap.self="closeExerciseSelector" style="z-index: 1000;">
 			<view class="modal-content exercise-selector-modal">
 				<view class="modal-header">
-					<text class="modal-title">{{selectedExercise !== null ? '编辑动作' : '添加动作'}}</text>
+					<text class="modal-title">添加动作</text>
 					<view class="close-btn" @tap="closeExerciseSelector">×</view>
 				</view>
-				
+
 				<view class="modal-body">
-					<!-- 自定义动作输入 -->
-					<view class="form-group">
-						<text class="form-label">动作名称</text>
-						<input v-model="exerciseDetails.name" placeholder="请输入任意动作名称（可自定义）" class="form-input" />
-						<text class="form-hint">💡 您可以输入任何动作名称，不限于下方的选项</text>
+					<!-- 动作名称输入 -->
+					<view class="form-section">
+						<text class="section-label">动作名称</text>
+						<input v-model="exerciseDetails.name" placeholder="请输入任意动作名称（可自定义）" class="modern-input" />
+						<text class="form-hint-modern">💡 您可以输入任何动作名称，不限于下方的选项</text>
 					</view>
-					
-					<!-- 动作选择 -->
-					<view class="form-group">
-						<text class="form-label">快速选择常用动作（可选）</text>
-						<view class="exercise-categories">
-							<view class="category" v-for="(exercises, category) in exerciseLibrary" :key="category" v-if="exercises.length > 0">
-								<text class="category-name">{{category}}</text>
-								<view class="exercise-options">
-									<view class="exercise-option" 
-										v-for="exercise in exercises" 
+
+					<!-- 快速选择动作 -->
+					<view class="form-section">
+						<text class="section-label">快速选择常用动作（可选）</text>
+						<view class="exercise-categories-modern">
+							<view class="category-modern" v-for="(exercises, category) in exerciseLibrary" :key="category" v-if="exercises.length > 0">
+								<view class="category-header-modern">
+									<text class="category-name-modern">{{category}}</text>
+								</view>
+								<view class="exercise-options-modern">
+									<view class="exercise-option-modern"
+										v-for="exercise in exercises"
 										:key="exercise"
 										:class="{'selected': exerciseDetails && exerciseDetails.name === exercise}"
 										@tap="selectExerciseName(exercise)">
@@ -214,10 +216,10 @@
 					</view>
 				</view>
 				
-				<view class="modal-footer">
-					<button class="btn btn-outline" @tap="closeExerciseSelector">取消</button>
-					<button class="btn btn-primary" @tap="saveExercise" :disabled="!exerciseDetails || !exerciseDetails.name">
-						{{selectedExercise !== null ? '更新' : '添加'}}
+				<view class="modal-footer-modern">
+					<button class="modern-btn outline" @tap="closeExerciseSelector">取消</button>
+					<button class="modern-btn primary" @tap="saveExercise" :disabled="!exerciseDetails || !exerciseDetails.name">
+						添加
 					</button>
 				</view>
 			</view>
@@ -1565,19 +1567,20 @@ uni-modal, .uni-modal {
 }
 
 .modal-content {
-	width: 90%;
-	max-width: 800rpx;
-	max-height: 90vh;
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
 	background-color: #fff;
-	border-radius: 12rpx;
+	border-radius: 20rpx;
 	overflow: hidden;
-	box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
 	display: flex;
 	flex-direction: column;
 }
 
 .modal-header {
-	padding: 30rpx;
+	padding: 44rpx 44rpx;
 	border-bottom: 2rpx solid #e5e7eb;
 	display: flex;
 	justify-content: space-between;
@@ -1592,8 +1595,8 @@ uni-modal, .uni-modal {
 }
 
 .close-btn {
-	width: 60rpx;
-	height: 60rpx;
+	width: 68rpx;
+	height: 68rpx;
 	border-radius: 50%;
 	background: linear-gradient(135deg, #ff6b6b, #ee5a52);
 	color: #fff;
@@ -1608,32 +1611,33 @@ uni-modal, .uni-modal {
 }
 
 .modal-body {
-	padding: 30rpx;
+	padding: 44rpx;
 	overflow-y: auto;
 	flex: 1;
 	background-color: #fff;
 }
 
 .modal-footer {
-	padding: 20rpx 30rpx;
+	padding: 40rpx 44rpx;
 	border-top: 2rpx solid #e5e7eb;
 	display: flex;
 	justify-content: flex-end;
 	flex-shrink: 0;
 	background-color: #fff;
-	gap: 20rpx;
+	gap: 28rpx;
 }
 
 .btn {
-	height: 88rpx;
-	line-height: 86rpx;
-	border-radius: 8rpx;
-	font-size: 32rpx;
+	height: 100rpx;
+	line-height: 98rpx;
+	border-radius: 12rpx;
+	font-size: 30rpx;
 	text-align: center;
 	border: none;
-	padding: 0 30rpx;
+	padding: 0 36rpx;
 	cursor: pointer;
 	transition: all 0.3s ease;
+	min-width: 180rpx;
 }
 
 .btn-primary {
@@ -1778,16 +1782,17 @@ uni-modal, .uni-modal {
 
 .form-input {
 	width: 100%;
-	height: 88rpx;
-	padding: 0 24rpx;
-	font-size: 28rpx;
+	height: 96rpx;
+	padding: 0 28rpx;
+	font-size: 30rpx;
 	color: #333;
 	background-color: #fff;
 	border: 2rpx solid #e1e8ed;
-	border-radius: 12rpx;
+	border-radius: 16rpx;
 	box-sizing: border-box;
 	transition: all 0.3s ease;
 	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+	line-height: 1.4;
 }
 
 .form-input:focus {
@@ -2040,15 +2045,72 @@ uni-modal, .uni-modal {
 }
 
 .day-plan-modal {
-	width: 90%;
-	max-width: 800rpx;
-	max-height: 80vh;
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
 	overflow-y: auto;
 }
 
 @media screen and (max-width: 768px) {
 	.container {
 		width: 90%;
+	}
+
+	.modal-content,
+	.day-plan-modal,
+	.exercise-selector-modal {
+		width: 92%;
+		max-height: 92%;
+		height: 92%;
+	}
+
+	.form-input,
+	.modern-input {
+		height: 96rpx;
+		font-size: 28rpx;
+		padding: 0 24rpx;
+	}
+
+	.btn {
+		height: 88rpx;
+		line-height: 86rpx;
+		padding: 0 32rpx;
+		min-width: 160rpx;
+		font-size: 28rpx;
+	}
+
+	.modal-header {
+		padding: 36rpx 36rpx;
+	}
+
+	.modal-body {
+		padding: 36rpx;
+	}
+
+	.modal-footer {
+		padding: 32rpx 36rpx;
+		gap: 24rpx;
+	}
+
+	.form-section {
+		margin-bottom: 40rpx;
+	}
+
+	.section-label {
+		margin-bottom: 20rpx;
+	}
+
+	.modern-btn {
+		padding: 20rpx 32rpx;
+		min-width: 160rpx;
+		min-height: 88rpx;
+		font-size: 28rpx;
+	}
+
+	.modal-footer-modern {
+		padding: 32rpx 36rpx;
+		gap: 24rpx;
 	}
 	
 	.top-nav {
@@ -2103,5 +2165,171 @@ uni-modal, .uni-modal {
 	.plan-info, .no-plan {
 		text-align: left;
 	}
+}
+
+/* 现代化弹窗样式 - 统一尺寸标准 */
+.exercise-selector-modal {
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
+	border-radius: 24rpx;
+	overflow: hidden;
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
+}
+
+/* 现代化表单区域 */
+.form-section {
+	margin-bottom: 48rpx;
+}
+
+.section-label {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 24rpx;
+	display: block;
+}
+
+.modern-input {
+	width: 100%;
+	height: 108rpx;
+	padding: 0 28rpx;
+	font-size: 30rpx;
+	color: #1f2937;
+	background: #f9fafb;
+	border: 2rpx solid #e5e7eb;
+	border-radius: 16rpx;
+	box-sizing: border-box;
+	transition: all 0.3s ease;
+	line-height: 1.4;
+}
+
+.modern-input:focus {
+	background: #ffffff;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 6rpx rgba(59, 130, 246, 0.1);
+	outline: none;
+}
+
+.form-hint-modern {
+	font-size: 24rpx;
+	color: #f59e0b;
+	margin-top: 12rpx;
+	display: block;
+	line-height: 1.4;
+}
+
+/* 现代化动作选择样式 */
+.exercise-categories-modern {
+	max-height: 60vh;
+	overflow-y: auto;
+	border-radius: 16rpx;
+	background: #f9fafb;
+	padding: 16rpx;
+}
+
+.category-modern {
+	margin-bottom: 32rpx;
+}
+
+.category-header-modern {
+	background: linear-gradient(135deg, #6366f1, #8b5cf6);
+	border-radius: 16rpx;
+	padding: 20rpx 24rpx;
+	margin-bottom: 16rpx;
+}
+
+.category-name-modern {
+	font-size: 32rpx;
+	font-weight: 700;
+	color: #ffffff;
+	text-align: center;
+}
+
+.exercise-options-modern {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12rpx;
+}
+
+.exercise-option-modern {
+	padding: 16rpx 20rpx;
+	background: #ffffff;
+	border: 2rpx solid #e5e7eb;
+	border-radius: 12rpx;
+	font-size: 26rpx;
+	color: #374151;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 120rpx;
+	text-align: center;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.exercise-option-modern:active {
+	transform: scale(0.98);
+}
+
+.exercise-option-modern.selected {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	color: #ffffff;
+	border-color: #1d4ed8;
+	box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.3);
+}
+
+/* 现代化按钮样式 */
+.modal-footer-modern {
+	padding: 40rpx 44rpx;
+	background: #f9fafb;
+	border-top: 2rpx solid #e5e7eb;
+	display: flex;
+	gap: 28rpx;
+	justify-content: flex-end;
+}
+
+.modern-btn {
+	padding: 24rpx 40rpx;
+	border-radius: 16rpx;
+	font-size: 30rpx;
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 180rpx;
+	min-height: 100rpx;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.modern-btn.outline {
+	background: #ffffff;
+	color: #6b7280;
+	border: 2rpx solid #d1d5db;
+}
+
+.modern-btn.outline:active {
+	background: #f3f4f6;
+	transform: scale(0.98);
+}
+
+.modern-btn.primary {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	color: #ffffff;
+	box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.3);
+}
+
+.modern-btn.primary:active {
+	transform: scale(0.98);
+	box-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.4);
+}
+
+.modern-btn.primary:disabled {
+	background: #d1d5db;
+	color: #9ca3af;
+	box-shadow: none;
+	cursor: not-allowed;
 }
 </style>

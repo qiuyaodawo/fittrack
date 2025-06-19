@@ -1200,13 +1200,16 @@ export default {
 
 .modal-content {
 	background-color: #fff;
-	border-radius: 16rpx;
-	width: 90%;
-	max-height: 80vh;
+	border-radius: 20rpx;
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
 	overflow: hidden;
-	
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
+
 	&.detail-modal {
-		max-width: 600rpx;
+		max-width: 700rpx;
 	}
 }
 
@@ -1214,7 +1217,7 @@ export default {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 30rpx;
+	padding: 44rpx 44rpx;
 	border-bottom: 2rpx solid #f1f5f9;
 }
 
@@ -1226,31 +1229,32 @@ export default {
 .modal-header-actions {
 	display: flex;
 	align-items: center;
-	gap: 20rpx;
+	gap: 24rpx;
 }
 
 .delete-btn {
 	background-color: #ff4757;
 	color: white;
 	border: none;
-	border-radius: 6rpx;
-	padding: 10rpx 20rpx;
-	font-size: 24rpx;
+	border-radius: 8rpx;
+	padding: 16rpx 28rpx;
+	font-size: 26rpx;
 	line-height: 1;
+	height: 68rpx;
 }
 
 .modal-close {
 	font-size: 48rpx;
 	color: var(--text-color-light);
-	width: 60rpx;
-	height: 60rpx;
+	width: 68rpx;
+	height: 68rpx;
 	display: flex;
 	justify-content: center;
 	align-items: center;
 }
 
 .modal-body {
-	padding: 30rpx;
+	padding: 44rpx;
 	max-height: 60vh;
 	overflow-y: auto;
 }
@@ -1381,8 +1385,9 @@ export default {
 .year-month-content {
 	background-color: #fff;
 	border-radius: 20rpx;
-	width: 600rpx;
-	max-height: 80vh;
+	width: 95%;
+	max-height: 95%;
+	height: 95%;
 	overflow: hidden;
 	color: var(--text-color);
 	box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
@@ -1528,7 +1533,7 @@ export default {
 	}
 	
 	.year-month-content {
-		width: 90%;
+		width: 95%;
 		margin: 0 20rpx;
 	}
 	

@@ -1368,16 +1368,22 @@ export default {
 
 .modal-content {
 	background-color: #fff;
-	border-radius: 16rpx;
-	width: 90%;
-	max-height: 80%;
+	border-radius: 20rpx;
+	width: 85%;
+	max-width: 1000rpx;
+	max-height: 90%;
+	height: 90%;
 	overflow: hidden;
+	box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
+	display: flex;
+	flex-direction: column;
 }
 
 .large-modal {
-	width: 95%;
-	max-height: 95%;
-	height: 95%;
+	width: 85%;
+	max-width: 1000rpx;
+	max-height: 90%;
+	height: 90%;
 }
 
 .modal-header {
@@ -1484,37 +1490,42 @@ export default {
 
 // 编辑动作弹窗样式
 .edit-exercise-modal {
-	width: 85%;
-	max-height: 70%;
+	width: 88%;
+	max-width: 950rpx;
+	max-height: 88%;
+	height: 88%;
 }
 
 .edit-form-group {
-	margin-bottom: 30rpx;
+	margin-bottom: 48rpx;
 }
 
 .edit-form-label {
-	font-size: 28rpx;
-	font-weight: 500;
+	font-size: 32rpx;
+	font-weight: 600;
 	color: var(--text-color);
-	margin-bottom: 15rpx;
+	margin-bottom: 24rpx;
 	display: block;
 }
 
 .edit-input {
 	width: 100%;
-	height: 80rpx;
-	padding: 0 20rpx;
+	height: 108rpx;
+	padding: 0 28rpx;
 	border: 2rpx solid var(--border-color);
-	border-radius: 8rpx;
-	font-size: 28rpx;
+	border-radius: 16rpx;
+	font-size: 30rpx;
 	background-color: #fff;
+	box-sizing: border-box;
+	line-height: 1.4;
 }
 
 .modal-footer {
 	display: flex;
-	gap: 20rpx;
-	padding: 30rpx;
+	gap: 28rpx;
+	padding: 40rpx 44rpx;
 	border-top: 2rpx solid var(--border-color);
+	justify-content: flex-end;
 }
 
 .btn {

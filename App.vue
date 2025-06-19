@@ -131,11 +131,16 @@
 	}
 	
 	.btn {
-		height: 88rpx;
-		line-height: 88rpx;
-		border-radius: 8rpx;
+		height: 96rpx;
+		line-height: 96rpx;
+		border-radius: 12rpx;
 		font-size: 32rpx;
 		text-align: center;
+		padding: 0 32rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.3s ease;
 	}
 	
 	.btn-primary {

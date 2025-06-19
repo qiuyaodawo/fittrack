@@ -6,95 +6,109 @@
 		<view class="content-container">
 			<!-- 上方并排布局 -->
 			<view class="top-row">
-				<view class="card stat-card">
+				<view class="card stat-card weight-card">
 					<text class="stat-card-title">体重变化</text>
 					<view class="weight-content" v-if="weightChangeInfo.current">
-						<view class="pr-item">
-							<text class="pr-exercise">当前体重</text>
-							<view class="pr-weight-info">
-								<text class="pr-weight">
-									{{weightChangeInfo.current}} kg
-									<text :class="weightChangeInfo.change > 0 ? 'text-error pr-change' : weightChangeInfo.change < 0 ? 'text-success pr-change' : 'text-gray pr-change'" v-if="weightChangeInfo.change !== null && weightChangeInfo.change !== 0">
-										{{weightChangeInfo.change > 0 ? ' +' : ' '}}{{weightChangeInfo.change}} kg
-									</text>
-								</text>
-							</view>
-							<text class="pr-date">{{weightChangeInfo.date}}</text>
-						</view>
-						
-						<!-- 近7天体重变化折线图 -->
-						<view class="weight-chart" v-if="weightChangeInfo.chartData.length > 0">
-							<text class="chart-title">近7天变化</text>
-							<view class="line-chart">
-								<view class="chart-container">
-									<!-- Y轴刻度 -->
-									<view class="y-axis">
-										<view
-											class="y-axis-label"
-											v-for="(label, index) in weightChangeInfo.yAxisLabels"
-											:key="index"
-											:style="{ bottom: (index * 25) + '%' }"
+						<!-- 当前体重信息区域 - 优化布局 -->
+						<view class="current-weight-section">
+							<view class="weight-info-row">
+								<view class="weight-main-info">
+									<text class="weight-label">当前体重</text>
+									<view class="weight-value-container">
+										<text class="weight-value">{{weightChangeInfo.current}} kg</text>
+										<text
+											:class="weightChangeInfo.change > 0 ? 'weight-change weight-increase' : weightChangeInfo.change < 0 ? 'weight-change weight-decrease' : 'weight-change weight-stable'"
+											v-if="weightChangeInfo.change !== null && weightChangeInfo.change !== 0"
 										>
-											{{label}}kg
-										</view>
+											{{weightChangeInfo.change > 0 ? '+' : ''}}{{weightChangeInfo.change}} kg
+										</text>
+									</view>
+								</view>
+								<view class="weight-date-info">
+									<text class="weight-date">{{weightChangeInfo.date}}</text>
+								</view>
+							</view>
+						</view>
+
+						<!-- 优化的柱状图区域 -->
+						<view class="weight-chart-section" v-if="chartConfig.hasData">
+							<text class="chart-section-title">近7天变化趋势</text>
+							<view class="responsive-chart-container" :style="{ height: chartConfig.chartHeight + 100 + 'px' }">
+								<!-- Y轴刻度 - 响应式定位 -->
+								<view class="y-axis-container" :style="{ height: chartConfig.chartHeight + 'px' }">
+									<view
+										class="y-tick"
+										v-for="(tick, index) in chartConfig.yTicks"
+										:key="index"
+										:style="{ bottom: tick.position + 'px' }"
+									>
+										<text class="y-tick-label">{{tick.value}}kg</text>
+										<view class="y-tick-line"></view>
+									</view>
+								</view>
+
+								<!-- 图表主区域 - 动态尺寸 -->
+								<view class="chart-main-area" :style="{
+									height: chartConfig.chartHeight + 'px',
+									width: chartConfig.chartWidth + 'px'
+								}">
+									<!-- 背景网格 -->
+									<view class="chart-grid">
+										<view
+											class="grid-line"
+											v-for="(tick, index) in chartConfig.yTicks"
+											:key="index"
+											:style="{ bottom: tick.position + 'px' }"
+										></view>
 									</view>
 
-									<!-- 图表区域 -->
-									<view class="chart-area">
-										<!-- 网格线 -->
-										<view class="grid-lines">
-											<view
-												class="grid-line"
-												v-for="n in 4"
-												:key="n"
-												:style="{ bottom: (n * 25) + '%' }"
-											></view>
-										</view>
-
-										<!-- 折线和数据点 -->
-										<svg class="line-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-											<!-- 折线路径 -->
-											<polyline
-												:points="weightChangeInfo.linePoints"
-												fill="none"
-												stroke="#3b82f6"
-												stroke-width="0.8"
-												v-if="weightChangeInfo.linePoints"
-											/>
-
-											<!-- 数据点 -->
-											<circle
-												v-for="(point, index) in weightChangeInfo.dataPoints"
-												:key="index"
-												:cx="point.x"
-												:cy="point.y"
-												r="1.5"
-												fill="#3b82f6"
-												v-if="point.hasData"
-											/>
-										</svg>
-
-										<!-- 数据标签 -->
+									<!-- 柱状图区域 -->
+									<view class="bars-area">
 										<view
-											class="data-point"
-											v-for="(item, index) in weightChangeInfo.chartData"
+											class="bar-container"
+											v-for="(bar, index) in chartConfig.bars"
 											:key="index"
-											:style="getPointStyle(item, index)"
-											v-if="item.weight"
+											:style="{
+												left: bar.x + 'px',
+												width: bar.width + 'px'
+											}"
+											@touchstart="onBarHover(index)"
+											@touchend="onBarLeave()"
+											@tap="onBarClick(bar, index)"
 										>
-											<text class="point-value">{{item.weight}}kg</text>
+											<!-- 柱子 - 添加极端值标识 -->
+											<view
+												class="bar-rect"
+												:class="{
+													'bar-active': hoveredBarIndex === index,
+													'bar-extreme': bar.isExtreme
+												}"
+												:style="{
+													height: bar.height + 'px',
+													bottom: '0px'
+												}"
+											>
+												<!-- 数值标签 - 防止溢出 -->
+												<view
+													class="bar-value-label"
+													:class="{ 'label-extreme': bar.isExtreme }"
+												>
+													{{bar.value}}kg
+												</view>
+											</view>
 										</view>
 									</view>
 								</view>
 
-								<!-- X轴标签 -->
-								<view class="x-axis">
+								<!-- X轴日期标签 - 精确对齐 -->
+								<view class="x-axis-container" :style="{ width: chartConfig.chartWidth + 'px' }">
 									<view
-										class="x-axis-label"
-										v-for="(item, index) in weightChangeInfo.chartData"
+										class="x-tick"
+										v-for="(label, index) in chartConfig.xLabels"
 										:key="index"
+										:style="{ left: label.x + 'px' }"
 									>
-										{{item.dateLabel}}
+										<text class="x-tick-label" :class="{ 'has-data': label.hasData }">{{label.date}}</text>
 									</view>
 								</view>
 							</view>
@@ -503,7 +517,26 @@ export default {
 				change: null,
 				date: null
 			},
-			
+
+			// 新的图表配置
+			chartConfig: {
+				hasData: false,
+				yTicks: [],
+				bars: [],
+				chartHeight: 300,
+				chartWidth: 600,
+				barWidth: 60,
+				minValue: 0,
+				maxValue: 100
+			},
+
+			// 柱状图交互状态
+			hoveredBarIndex: -1,
+
+			// 响应式相关变量
+			resizeHandler: null,
+			resizeTimer: null,
+
 			// 同步状态
 			syncStatus: {
 				icon: '🔄',
@@ -578,23 +611,29 @@ export default {
 		// 页面显示时更新统计数据
 		// 初始化动作列表（排除自重动作）
 		this.initializeExerciseList();
-		
+
 		// 清理旧的无效记录
 		this.cleanupOldRecords();
-		
+
 		this.updatePersonalRecordsWithManualData();
 		this.updateStrengthProgress();
-		
+
 		// 加载本周锻炼部位数据
 		this.loadWeeklyBodyParts();
-		
+
 		// 加载体重变化信息
 		this.loadWeightChangeInfo();
-		
+
 		// 更新同步状态
 		this.updateSyncStatus();
-		
 
+		// 监听窗口尺寸变化，实现响应式图表
+		this.setupResizeListener();
+	},
+
+	onHide() {
+		// 页面隐藏时清理监听器
+		this.cleanupResizeListener();
 	},
 	onLoad() {
 		// 检查登录状态并同步数据
@@ -911,9 +950,7 @@ export default {
 		
 		// 更新力量进步统计
 		updateStrengthProgress() {
-			const workoutHistoryKey = this.getUserStorageKey('workoutHistory');
 			const strengthProgressKey = this.getUserStorageKey('strengthProgress');
-			const workoutHistory = uni.getStorageSync(workoutHistoryKey) || [];
 			const savedProgress = uni.getStorageSync(strengthProgressKey) || {};
 			
 			// 获取当前可用的动作列表（用于过滤旧记录）
@@ -1199,17 +1236,13 @@ export default {
 			// 获取近7天的数据用于图表
 			const chartData = this.getLast7DaysWeightData(weightHistory);
 
-			// 计算折线图数据
-			const lineChartData = this.calculateLineChartData(chartData);
+			// 生成新的图表配置
+			this.generateChartConfig(chartData);
 
 			this.weightChangeInfo = {
 				current: currentRecord.weight,
 				change: change,
-				date: currentRecord.date,
-				chartData: chartData,
-				yAxisLabels: lineChartData.yAxisLabels,
-				linePoints: lineChartData.linePoints,
-				dataPoints: lineChartData.dataPoints
+				date: currentRecord.date
 			};
 		},
 		
@@ -1230,101 +1263,264 @@ export default {
 				chartData.push({
 					date: dateString,
 					dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
-					weight: record ? record.weight : null
+					weight: record ? record.weight : null,
+					hasData: !!record  // 标记是否有数据
 				});
 			}
 
 			return chartData;
 		},
 
-		// 计算折线图数据
-		calculateLineChartData(chartData) {
-			// 获取所有有效的体重数据
-			const validWeights = chartData
-				.filter(item => item.weight !== null)
-				.map(item => item.weight);
+		// 全新的图表配置生成方法 - 支持完整一周显示，动态适配容器
+		generateChartConfig(chartData) {
+			// 过滤有效数据用于计算Y轴范围
+			const validData = chartData.filter(item => item.weight !== null);
 
-			if (validWeights.length === 0) {
-				return {
-					yAxisLabels: [],
-					linePoints: '',
-					dataPoints: []
-				};
+			if (validData.length === 0) {
+				this.chartConfig.hasData = false;
+				return;
 			}
 
-			// 计算Y轴范围，确保比例正确
-			const minWeight = Math.min(...validWeights);
-			const maxWeight = Math.max(...validWeights);
+			// 动态计算图表尺寸 - 基于容器响应式适配
+			const containerWidth = this.getChartContainerWidth();
+			const chartHeight = 280; // 增加高度，为数值标签留出更多空间
+			const chartWidth = Math.max(containerWidth - 160, 400); // 减去Y轴和边距，最小400px
+			const barWidth = Math.min(Math.max(chartWidth / 12, 40), 80); // 动态柱宽，范围40-80px
+			const totalDays = 7;     // 固定显示7天
+			const barSpacing = (chartWidth - totalDays * barWidth) / (totalDays + 1);
 
-			// 如果只有一个数据点或者数据差异很小，设置合理的显示范围
+			// 智能计算Y轴范围 - 根据数据分布动态调整
+			const weights = validData.map(item => item.weight);
+			const minWeight = Math.min(...weights);
+			const maxWeight = Math.max(...weights);
+			const dataRange = maxWeight - minWeight;
+
 			let yMin, yMax;
-			if (validWeights.length === 1 || (maxWeight - minWeight) < 2) {
-				const avgWeight = (minWeight + maxWeight) / 2;
-				yMin = Math.max(0, avgWeight - 2); // 最小不低于0
-				yMax = avgWeight + 2;
+			if (dataRange < 2) {
+				// 数据变化很小时，使用固定范围确保可视化效果
+				const center = (minWeight + maxWeight) / 2;
+				yMin = Math.max(0, Math.floor(center - 3));
+				yMax = Math.ceil(center + 3);
+			} else if (dataRange < 5) {
+				// 数据变化适中时，适当扩大范围
+				const center = (minWeight + maxWeight) / 2;
+				const expandedRange = Math.max(dataRange * 1.5, 6);
+				yMin = Math.max(0, Math.floor(center - expandedRange / 2));
+				yMax = Math.ceil(center + expandedRange / 2);
 			} else {
-				// 添加10%的边距使图表更美观
-				const range = maxWeight - minWeight;
-				const margin = range * 0.1;
-				yMin = Math.max(0, minWeight - margin);
-				yMax = maxWeight + margin;
+				// 数据变化较大时，添加合理边距
+				const margin = dataRange * 0.2;
+				yMin = Math.max(0, Math.floor(minWeight - margin));
+				yMax = Math.ceil(maxWeight + margin);
 			}
 
-			// 生成Y轴标签（5个刻度）
-			const yAxisLabels = [];
-			for (let i = 0; i < 5; i++) {
-				const value = yMin + (yMax - yMin) * (i / 4);
-				yAxisLabels.push(Math.round(value * 10) / 10);
-			}
+			// 智能生成Y轴刻度 - 根据数据范围调整刻度密度
+			const yTicks = this.generateYAxisTicks(yMin, yMax, chartHeight);
 
-			// 计算折线点坐标和数据点
-			const linePoints = [];
-			const dataPoints = [];
+			// 生成柱子和X轴标签配置 - 精确对齐
+			const bars = [];
+			const xLabels = [];
 
 			chartData.forEach((item, index) => {
-				const x = (index / (chartData.length - 1)) * 100; // X坐标百分比
+				const x = barSpacing + index * (barWidth + barSpacing);
 
+				// 为所有日期生成X轴标签位置，确保精确居中对齐
+				xLabels.push({
+					x: x + barWidth / 2, // 标签居中位置
+					date: item.dateLabel,
+					hasData: item.hasData
+				});
+
+				// 只为有数据的日期生成柱子，确保高度计算准确
 				if (item.weight !== null) {
-					// 计算Y坐标百分比（注意SVG坐标系Y轴向下）
-					const y = 100 - ((item.weight - yMin) / (yMax - yMin)) * 100;
-					linePoints.push(`${x},${y}`);
+					const heightRatio = (item.weight - yMin) / (yMax - yMin);
+					const height = Math.max(heightRatio * chartHeight, 3); // 最小高度3px，确保可见
 
-					dataPoints.push({
+					bars.push({
 						x: x,
-						y: y,
-						hasData: true
-					});
-				} else {
-					dataPoints.push({
-						x: x,
-						y: 0,
-						hasData: false
+						width: barWidth,
+						height: height,
+						value: item.weight,
+						date: item.dateLabel,
+						dayIndex: index,  // 记录是第几天
+						isExtreme: this.isExtremeValue(item.weight, weights) // 标记极端值
 					});
 				}
 			});
 
-			return {
-				yAxisLabels: yAxisLabels,
-				linePoints: linePoints.join(' '),
-				dataPoints: dataPoints
+			// 更新图表配置，添加响应式参数
+			this.chartConfig = {
+				hasData: true,
+				yTicks: yTicks,
+				bars: bars,
+				xLabels: xLabels,
+				chartHeight: chartHeight,
+				chartWidth: chartWidth,
+				barWidth: barWidth,
+				barSpacing: barSpacing,
+				minValue: yMin,
+				maxValue: yMax,
+				dataRange: dataRange,
+				containerWidth: containerWidth
 			};
+
+			console.log('优化后图表配置:', this.chartConfig);
+		},
+
+		// 新增：获取图表容器宽度的方法
+		getChartContainerWidth() {
+			// 在实际应用中，这里应该获取真实的容器宽度
+			// 暂时使用估算值，基于60%卡片宽度
+			const screenWidth = uni.getSystemInfoSync().screenWidth;
+			const containerWidth = screenWidth * 0.8; // 80%页面宽度
+			const cardWidth = containerWidth * 0.6; // 60%卡片宽度
+			return cardWidth - 60; // 减去卡片内边距
+		},
+
+		// 新增：智能生成Y轴刻度的方法
+		generateYAxisTicks(yMin, yMax, chartHeight) {
+			const range = yMax - yMin;
+			let tickCount = 6; // 默认6个刻度
+
+			// 根据数据范围调整刻度数量
+			if (range <= 5) {
+				tickCount = Math.max(Math.ceil(range) + 1, 4); // 小范围时增加刻度密度
+			} else if (range > 20) {
+				tickCount = 8; // 大范围时适当增加刻度
+			}
+
+			const yTicks = [];
+			for (let i = 0; i < tickCount; i++) {
+				const value = yMin + (range * i) / (tickCount - 1);
+				const position = (chartHeight * i) / (tickCount - 1);
+				yTicks.push({
+					value: Math.round(value * 10) / 10,
+					position: position
+				});
+			}
+
+			return yTicks;
+		},
+
+		// 新增：判断是否为极端值的方法
+		isExtremeValue(value, allValues) {
+			if (allValues.length < 3) return false;
+
+			const sorted = [...allValues].sort((a, b) => a - b);
+			const q1 = sorted[Math.floor(sorted.length * 0.25)];
+			const q3 = sorted[Math.floor(sorted.length * 0.75)];
+			const iqr = q3 - q1;
+
+			return value < (q1 - 1.5 * iqr) || value > (q3 + 1.5 * iqr);
+		},
+
+		// 新增：设置响应式监听器
+		setupResizeListener() {
+			// 在小程序环境中，监听窗口尺寸变化
+			if (typeof uni !== 'undefined' && uni.onWindowResize) {
+				this.resizeHandler = () => {
+					// 延迟执行，避免频繁更新
+					clearTimeout(this.resizeTimer);
+					this.resizeTimer = setTimeout(() => {
+						this.handleResize();
+					}, 300);
+				};
+				uni.onWindowResize(this.resizeHandler);
+			}
+		},
+
+		// 新增：清理响应式监听器
+		cleanupResizeListener() {
+			if (this.resizeHandler && typeof uni !== 'undefined' && uni.offWindowResize) {
+				uni.offWindowResize(this.resizeHandler);
+			}
+			if (this.resizeTimer) {
+				clearTimeout(this.resizeTimer);
+			}
+		},
+
+		// 新增：处理尺寸变化
+		handleResize() {
+			if (this.chartConfig.hasData) {
+				// 重新生成图表配置以适应新的容器尺寸
+				const weightHistoryKey = this.getUserStorageKey('weightHistory');
+				const weightHistory = uni.getStorageSync(weightHistoryKey) || [];
+
+				if (weightHistory.length > 0) {
+					const chartData = this.getLast7DaysWeightData(weightHistory);
+					this.generateChartConfig(chartData);
+				}
+			}
+		},
+
+		// 优化：增强的柱状图交互方法
+		onBarHover(index) {
+			this.hoveredBarIndex = index;
+			// 添加触觉反馈（如果支持）
+			if (typeof uni !== 'undefined' && uni.vibrateShort) {
+				uni.vibrateShort({
+					type: 'light'
+				});
+			}
+		},
+
+		onBarLeave() {
+			this.hoveredBarIndex = -1;
+		},
+
+		onBarClick(bar, index) {
+			console.log('点击柱状图:', bar, index);
+
+			// 显示详细信息
+			const changeText = this.getWeightChangeText(bar.value, index);
+			uni.showToast({
+				title: `${bar.date}: ${bar.value}kg${changeText}`,
+				icon: 'none',
+				duration: 2000
+			});
+
+			// 添加触觉反馈
+			if (typeof uni !== 'undefined' && uni.vibrateShort) {
+				uni.vibrateShort({
+					type: 'medium'
+				});
+			}
+		},
+
+		// 新增：获取体重变化文本
+		getWeightChangeText(currentWeight, index) {
+			if (index === 0 || !this.chartConfig.bars[index - 1]) {
+				return '';
+			}
+
+			const previousWeight = this.chartConfig.bars[index - 1].value;
+			const change = currentWeight - previousWeight;
+
+			if (Math.abs(change) < 0.1) {
+				return ' (无变化)';
+			}
+
+			return change > 0 ? ` (+${change.toFixed(1)}kg)` : ` (${change.toFixed(1)}kg)`;
 		},
 		
 
 
-		// 获取数据点样式
-		getPointStyle(item, index) {
-			if (!item.weight) {
-				return { display: 'none' };
-			}
+		// 新的柱状图交互方法
+		onBarHover(index) {
+			this.hoveredBarIndex = index;
+		},
 
-			// 计算X轴位置
-			const xPercent = (index / (this.weightChangeInfo.chartData.length - 1)) * 100;
+		onBarLeave() {
+			this.hoveredBarIndex = -1;
+		},
 
-			return {
-				left: `${xPercent}%`,
-				transform: 'translateX(-50%)'
-			};
+		onBarClick(bar, index) {
+			console.log('点击柱状图:', bar, index);
+			uni.showToast({
+				title: `${bar.date}: ${bar.value}kg`,
+				icon: 'none',
+				duration: 1500
+			});
 		},
 		
 		// 修复：检查登录状态并同步数据 - 使用安全的同步策略
@@ -1547,13 +1743,29 @@ export default {
 	display: flex;
 	gap: 30rpx;
 	margin-bottom: 40rpx;
-	
+
 	.card {
-		flex: 1;
+		flex: 1; /* 默认等分 */
 	}
-	
+
+	/* 体重变化卡片占用60%空间 */
+	.card.stat-card:first-child {
+		flex: 6; /* 占用6份空间 */
+	}
+
+	/* 本周锻炼部位卡片占用40%空间 */
+	.card.weekly-body-parts {
+		flex: 4; /* 占用4份空间 */
+		min-width: 300rpx; /* 确保内容可读 */
+	}
+
 	@media screen and (max-width: 768px) {
 		flex-direction: column;
+
+		.card.stat-card:first-child,
+		.card.weekly-body-parts {
+			flex: none; /* 移动端取消flex比例 */
+		}
 	}
 }
 
@@ -1839,7 +2051,8 @@ export default {
 	font-weight: 500;
 }
 
-.line-chart {
+/* 新的柱状图样式 - 使用flex布局确保对齐 */
+.bar-chart-new {
 	width: 100%;
 	background-color: #ffffff;
 	border-radius: 12rpx;
@@ -1847,6 +2060,8 @@ export default {
 	box-sizing: border-box;
 	border: 1rpx solid #e5e7eb;
 	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: stretch;
 }
 
 .chart-container {
@@ -1895,7 +2110,8 @@ export default {
 	background-color: #f1f5f9;
 }
 
-.line-svg {
+// 柱状图容器
+.bars-container {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -1904,29 +2120,55 @@ export default {
 	z-index: 2;
 }
 
-.data-point {
+// 单个柱状图项
+.bar-item {
 	position: absolute;
-	top: 0;
-	z-index: 3;
-	transform: translateY(-50%);
+	bottom: 0;
+	cursor: pointer;
+	transition: all 0.3s ease;
 }
 
-.point-value {
+// 柱子样式
+.bar {
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+	border-radius: 4rpx 4rpx 0 0;
+	position: relative;
+	transition: all 0.3s ease;
+	box-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.3);
+
+	&:hover,
+	&.bar-hover {
+		background: linear-gradient(180deg, #2563eb 0%, #1e40af 100%);
+		transform: scale(1.05);
+		box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.5);
+	}
+}
+
+// 柱子上的数值标签
+.bar-value {
+	position: absolute;
+	top: -30rpx;
+	left: 50%;
+	transform: translateX(-50%);
 	font-size: 20rpx;
 	font-weight: bold;
 	color: var(--primary-color);
-	background-color: rgba(255, 255, 255, 0.9);
+	background-color: rgba(255, 255, 255, 0.95);
 	padding: 4rpx 8rpx;
 	border-radius: 4rpx;
 	white-space: nowrap;
-	box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+	box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.15);
+	border: 1rpx solid #e5e7eb;
+	z-index: 10;
 }
 
 .x-axis {
-	display: flex;
-	justify-content: space-between;
+	position: relative;
 	margin-top: 15rpx;
 	padding-left: 70rpx;
+	height: 40rpx;
 }
 
 .x-axis-label {
@@ -1934,7 +2176,8 @@ export default {
 	color: #6b7280;
 	font-weight: 500;
 	text-align: center;
-	flex: 1;
+	white-space: nowrap;
+	width: auto;
 }
 
 .empty-text {
@@ -2048,42 +2291,534 @@ export default {
 	margin-top: 20rpx;
 }
 
+// 移动端适配
 @media screen and (max-width: 768px) {
 	.top-nav {
 		flex-direction: column;
 		padding: 20rpx;
 	}
-	
+
 	.logo {
 		margin-bottom: 20rpx;
 	}
-	
+
 	.nav-links {
 		width: 100%;
 		justify-content: space-between;
 		margin-bottom: 20rpx;
 	}
-	
+
 	.nav-item {
 		padding: 10rpx;
 		margin: 0 5rpx;
 		font-size: 24rpx;
 	}
-	
+
 	.input-row {
 		flex-direction: column;
 		gap: 10rpx;
-		
+
 		.exercise-picker,
 		.weight-input,
 		.btn-sm {
 			width: 100%;
 		}
 	}
-	
+
 	.content-container {
 		width: 90%;
 		padding: 20rpx;
+	}
+
+	// 移动端柱状图优化
+	.bar-chart {
+		padding: 15rpx;
+	}
+
+	.chart-container {
+		height: 250rpx;
+	}
+
+	.bar-value {
+		font-size: 18rpx;
+		top: -25rpx;
+		padding: 2rpx 6rpx;
+	}
+
+	.y-axis-label {
+		font-size: 18rpx;
+	}
+
+	.x-axis-label {
+		font-size: 20rpx;
+	}
+
+	// 移动端触摸交互优化
+	.bar-item {
+		// 增加触摸区域
+		&::before {
+			content: '';
+			position: absolute;
+			top: -20rpx;
+			left: -10rpx;
+			right: -10rpx;
+			bottom: -10rpx;
+			z-index: -1;
+		}
+	}
+}
+
+/* 体重卡片样式优化 */
+.weight-card {
+	.stat-card-title {
+		margin-bottom: 30rpx;
+	}
+}
+
+/* 当前体重信息区域 */
+.current-weight-section {
+	margin-bottom: 30rpx;
+	padding: 25rpx;
+	background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+	border-radius: 12rpx;
+	border: 1rpx solid #e2e8f0;
+}
+
+.weight-info-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 20rpx;
+}
+
+.weight-main-info {
+	flex: 1;
+	min-width: 200rpx;
+}
+
+.weight-label {
+	font-size: 26rpx;
+	color: #64748b;
+	font-weight: 500;
+	display: block;
+	margin-bottom: 8rpx;
+}
+
+.weight-value-container {
+	display: flex;
+	align-items: baseline;
+	gap: 12rpx;
+	flex-wrap: wrap;
+}
+
+.weight-value {
+	font-size: 36rpx;
+	font-weight: 700;
+	color: #1e293b;
+	line-height: 1.2;
+}
+
+.weight-change {
+	font-size: 24rpx;
+	font-weight: 600;
+	padding: 4rpx 8rpx;
+	border-radius: 6rpx;
+	line-height: 1;
+
+	&.weight-increase {
+		color: #dc2626;
+		background-color: rgba(220, 38, 38, 0.1);
+	}
+
+	&.weight-decrease {
+		color: #16a34a;
+		background-color: rgba(22, 163, 74, 0.1);
+	}
+
+	&.weight-stable {
+		color: #64748b;
+		background-color: rgba(100, 116, 139, 0.1);
+	}
+}
+
+.weight-date-info {
+	text-align: right;
+}
+
+.weight-date {
+	font-size: 24rpx;
+	color: #64748b;
+	font-weight: 500;
+}
+
+/* 图表区域样式 */
+.weight-chart-section {
+	margin-top: 25rpx;
+}
+
+.chart-section-title {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #374151;
+	margin-bottom: 20rpx;
+	display: block;
+}
+
+/* 响应式图表容器 */
+.responsive-chart-container {
+	width: 100%;
+	background-color: #ffffff;
+	border-radius: 12rpx;
+	padding: 50rpx 30rpx 30rpx 30rpx;
+	box-sizing: border-box;
+	border: 1rpx solid #e5e7eb;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+	position: relative;
+	overflow: visible;
+	min-height: 350rpx;
+}
+
+/* Y轴容器 - 响应式 */
+.y-axis-container {
+	position: absolute;
+	left: 30rpx;
+	top: 50rpx;
+	width: 80rpx;
+	z-index: 5;
+}
+
+.y-tick {
+	position: absolute;
+	left: 0;
+	width: 70rpx;
+	height: 20rpx;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+}
+
+.y-tick-label {
+	font-size: 20rpx;
+	color: #6b7280;
+	font-weight: 500;
+	margin-right: 8rpx;
+}
+
+.y-tick-line {
+	width: 6rpx;
+	height: 1rpx;
+	background-color: #d1d5db;
+}
+
+/* 图表主区域 - 动态尺寸 */
+.chart-main-area {
+	margin-left: 120rpx;
+	margin-right: 30rpx;
+	position: relative;
+	border-left: 2rpx solid #e5e7eb;
+	border-bottom: 2rpx solid #e5e7eb;
+	overflow: visible;
+	background-color: #fafbfc;
+}
+
+/* 背景网格 */
+.chart-grid {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+.grid-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 1rpx;
+	background-color: #f1f5f9;
+	opacity: 0.8;
+}
+
+/* 柱状图区域 */
+.bars-area {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 10;
+}
+
+.bar-container {
+	position: absolute;
+	bottom: 0;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:active {
+		transform: scale(0.98);
+	}
+}
+
+.bar-rect {
+	width: 100%;
+	background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+	border-radius: 8rpx 8rpx 0 0;
+	position: relative;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 3rpx 10rpx rgba(59, 130, 246, 0.3);
+
+	&.bar-active {
+		background: linear-gradient(180deg, #2563eb 0%, #1e40af 100%);
+		transform: scale(1.05);
+		box-shadow: 0 8rpx 25rpx rgba(59, 130, 246, 0.5);
+		z-index: 15;
+	}
+
+	&.bar-extreme {
+		background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+		box-shadow: 0 3rpx 10rpx rgba(245, 158, 11, 0.4);
+
+		&.bar-active {
+			background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+			box-shadow: 0 8rpx 25rpx rgba(245, 158, 11, 0.6);
+		}
+	}
+}
+
+.bar-value-label {
+	position: absolute;
+	top: -45rpx;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 20rpx;
+	font-weight: 600;
+	color: #1f2937;
+	background-color: rgba(255, 255, 255, 0.95);
+	padding: 6rpx 10rpx;
+	border-radius: 8rpx;
+	white-space: nowrap;
+	box-shadow: 0 3rpx 10rpx rgba(0, 0, 0, 0.15);
+	border: 1rpx solid #e5e7eb;
+	z-index: 20;
+	transition: all 0.3s ease;
+	backdrop-filter: blur(4rpx);
+
+	&.label-extreme {
+		background-color: rgba(245, 158, 11, 0.95);
+		color: white;
+		border-color: #f59e0b;
+	}
+}
+
+.bar-active .bar-value-label {
+	background-color: #3b82f6;
+	color: white;
+	border-color: #3b82f6;
+	transform: translateX(-50%) translateY(-6rpx);
+	box-shadow: 0 4rpx 15rpx rgba(59, 130, 246, 0.4);
+}
+
+/* X轴容器 - 精确对齐 */
+.x-axis-container {
+	margin-left: 120rpx;
+	margin-right: 30rpx;
+	position: relative;
+	height: 50rpx;
+	margin-top: 20rpx;
+}
+
+.x-tick {
+	position: absolute;
+	transform: translateX(-50%);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.x-tick-label {
+	font-size: 22rpx;
+	color: #9ca3af;
+	font-weight: 400;
+	text-align: center;
+	white-space: nowrap;
+	transition: all 0.3s ease;
+	padding: 4rpx 8rpx;
+	border-radius: 4rpx;
+
+	&.has-data {
+		color: #374151;
+		font-weight: 600;
+		background-color: rgba(59, 130, 246, 0.1);
+	}
+}
+
+/* 移动端响应式适配 */
+@media screen and (max-width: 768px) {
+	.content-container {
+		width: 95%;
+		padding: 20rpx;
+	}
+
+	.top-row {
+		flex-direction: column;
+		gap: 20rpx;
+
+		.card.stat-card:first-child,
+		.card.weekly-body-parts {
+			flex: none;
+		}
+	}
+
+	/* 体重卡片移动端优化 */
+	.current-weight-section {
+		padding: 20rpx;
+	}
+
+	.weight-info-row {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 15rpx;
+	}
+
+	.weight-value {
+		font-size: 32rpx;
+	}
+
+	.weight-change {
+		font-size: 22rpx;
+	}
+
+	.weight-date-info {
+		text-align: left;
+		width: 100%;
+	}
+
+	/* 图表容器移动端适配 */
+	.responsive-chart-container {
+		padding: 40rpx 20rpx 25rpx 20rpx;
+		min-height: 320rpx;
+	}
+
+	.y-axis-container {
+		width: 70rpx;
+		left: 20rpx;
+		top: 40rpx;
+	}
+
+	.y-tick {
+		width: 60rpx;
+	}
+
+	.y-tick-label {
+		font-size: 18rpx;
+		margin-right: 6rpx;
+	}
+
+	.chart-main-area {
+		margin-left: 100rpx;
+		margin-right: 20rpx;
+	}
+
+	.bar-value-label {
+		font-size: 18rpx;
+		top: -38rpx;
+		padding: 4rpx 6rpx;
+	}
+
+	.x-axis-container {
+		margin-left: 100rpx;
+		margin-right: 20rpx;
+		height: 45rpx;
+		margin-top: 15rpx;
+	}
+
+	.x-tick-label {
+		font-size: 20rpx;
+		padding: 3rpx 6rpx;
+	}
+
+	.chart-section-title {
+		font-size: 26rpx;
+		margin-bottom: 15rpx;
+	}
+}
+
+/* 超小屏幕适配 */
+@media screen and (max-width: 480px) {
+	.responsive-chart-container {
+		padding: 35rpx 15rpx 20rpx 15rpx;
+		min-height: 280rpx;
+	}
+
+	.y-axis-container {
+		width: 60rpx;
+		left: 15rpx;
+		top: 35rpx;
+	}
+
+	.y-tick {
+		width: 50rpx;
+	}
+
+	.y-tick-label {
+		font-size: 16rpx;
+		margin-right: 4rpx;
+	}
+
+	.chart-main-area {
+		margin-left: 85rpx;
+		margin-right: 15rpx;
+	}
+
+	.bar-value-label {
+		font-size: 16rpx;
+		top: -32rpx;
+		padding: 3rpx 5rpx;
+	}
+
+	.x-axis-container {
+		margin-left: 85rpx;
+		margin-right: 15rpx;
+		height: 40rpx;
+		margin-top: 12rpx;
+	}
+
+	.x-tick-label {
+		font-size: 18rpx;
+		padding: 2rpx 4rpx;
+	}
+
+	.weight-value {
+		font-size: 28rpx;
+	}
+
+	.weight-change {
+		font-size: 20rpx;
+	}
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+	.bar-container {
+		/* 增加触摸区域 */
+		&::before {
+			content: '';
+			position: absolute;
+			top: -30rpx;
+			left: -15rpx;
+			right: -15rpx;
+			bottom: -15rpx;
+			z-index: -1;
+		}
+	}
+
+	.bar-rect {
+		/* 触摸反馈优化 */
+		&:active {
+			transform: scale(1.02);
+		}
 	}
 }
 </style>
