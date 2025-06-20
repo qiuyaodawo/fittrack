@@ -110,6 +110,13 @@
 				<text class="empty-text">还没有添加任何动作</text>
 				<text class="empty-desc">点击上方"添加动作"按钮开始记录训练</text>
 			</view>
+
+			<!-- 保存训练按钮 -->
+			<view class="save-workout-section" v-if="selectedExercises.length > 0">
+				<button class="btn btn-primary save-workout-btn" @tap="saveWorkout">
+					保存训练
+				</button>
+			</view>
 		</view>
 		
 		<!-- 选择动作弹窗 -->
@@ -1548,6 +1555,31 @@ export default {
 .btn-primary {
 	background-color: var(--primary-color);
 	color: #fff;
+}
+
+// 保存训练按钮样式
+.save-workout-section {
+	padding: 40rpx 30rpx;
+	background-color: #fff;
+	margin-top: 20rpx;
+	border-radius: 16rpx;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.save-workout-btn {
+	width: 100%;
+	height: 88rpx;
+	font-size: 32rpx;
+	font-weight: 600;
+	background: linear-gradient(135deg, var(--primary-color), #4facfe);
+	border-radius: 12rpx;
+	box-shadow: 0 6rpx 20rpx rgba(74, 172, 254, 0.3);
+	transition: all 0.3s ease;
+}
+
+.save-workout-btn:active {
+	transform: translateY(2rpx);
+	box-shadow: 0 4rpx 15rpx rgba(74, 172, 254, 0.2);
 }
 
 
