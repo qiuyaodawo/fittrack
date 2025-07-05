@@ -1,6 +1,4 @@
-# FitTrack 健身追踪应用
-
-![FitTrack Logo](./static/logo.png)
+# <img src="./static/logo.png" alt="FitTrack Logo" height="40" valign="middle" /> FitTrack 健身追踪应用
 
 一款简洁、跨平台的健身追踪应用，旨在帮助您科学地记录、追踪并优化每一次训练。
 
